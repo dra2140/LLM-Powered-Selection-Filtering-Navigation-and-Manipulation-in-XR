@@ -1,0 +1,23 @@
+<dependencies>
+  <compile
+      roots="/Users/diaadem/Downloads/CS/3DUI&amp;AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle@@:unityLibrary::release">
+    <dependency
+        name="/Users/diaadem/Downloads/CS/3DUI&amp;AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle@@:unityLibrary::release"
+        simpleName="Gradle:unityLibrary"/>
+  </compile>
+  <package
+      roots="/Users/diaadem/Downloads/CS/3DUI&amp;AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle@@:unityLibrary::release,__local_aars__:/Users/diaadem/Downloads/CS/3DUI&amp;AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/libs/unity-classes.jar:unspecified@jar,:OVRPlugin:@aar,/Users/diaadem/Downloads/CS/3DUI&amp;AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle@@:unityLibrary:xrmanifest.androidlib::release">
+    <dependency
+        name="/Users/diaadem/Downloads/CS/3DUI&amp;AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle@@:unityLibrary::release"
+        simpleName="Gradle:unityLibrary"/>
+    <dependency
+        name="__local_aars__:/Users/diaadem/Downloads/CS/3DUI&amp;AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/libs/unity-classes.jar:unspecified@jar"
+        simpleName="__local_aars__:/Users/diaadem/Downloads/CS/3DUI&amp;AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/libs/unity-classes.jar"/>
+    <dependency
+        name=":OVRPlugin:@aar"
+        simpleName=":OVRPlugin"/>
+    <dependency
+        name="/Users/diaadem/Downloads/CS/3DUI&amp;AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle@@:unityLibrary:xrmanifest.androidlib::release"
+        simpleName="Gradle.unityLibrary:xrmanifest.androidlib"/>
+  </package>
+</dependencies>

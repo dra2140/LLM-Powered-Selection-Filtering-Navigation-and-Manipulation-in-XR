@@ -1,0 +1,18 @@
+<lint-module
+    format="1"
+    dir="/Users/diaadem/Downloads/CS/3DUI&amp;AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/launcher"
+    name=":launcher"
+    type="APP"
+    maven="Gradle:launcher:"
+    gradle="7.4.2"
+    buildFolder="build"
+    bootClassPath="/Applications/Unity/Hub/Editor/2022.3.58f1/PlaybackEngines/AndroidPlayer/SDK/platforms/android-35/android.jar:/Applications/Unity/Hub/Editor/2022.3.58f1/PlaybackEngines/AndroidPlayer/SDK/build-tools/34.0.0/core-lambda-stubs.jar"
+    javaSourceLevel="11"
+    compileTarget="android-35"
+    neverShrinking="true">
+  <lintOptions
+      absolutePaths="true"
+      checkReleaseBuilds="true"
+      explainIssues="true"/>
+  <variant name="release"/>
+</lint-module>

@@ -1,0 +1,209 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.unity.template.vr"
+4    android:installLocation="auto"
+5    android:versionCode="1"
+6    android:versionName="0.1" >
+7
+8    <uses-sdk
+9        android:minSdkVersion="32"
+9-->/Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/launcher/src/main/AndroidManifest.xml
+10        android:targetSdkVersion="35" />
+10-->/Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/launcher/src/main/AndroidManifest.xml
+11
+12    <supports-screens
+12-->/Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/launcher/src/main/AndroidManifest.xml:4:3-163
+13        android:anyDensity="true"
+13-->/Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/launcher/src/main/AndroidManifest.xml:4:135-160
+14        android:largeScreens="true"
+14-->/Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/launcher/src/main/AndroidManifest.xml:4:78-105
+15        android:normalScreens="true"
+15-->/Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/launcher/src/main/AndroidManifest.xml:4:49-77
+16        android:smallScreens="true"
+16-->/Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/launcher/src/main/AndroidManifest.xml:4:21-48
+17        android:xlargeScreens="true" />
+17-->/Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/launcher/src/main/AndroidManifest.xml:4:106-134
+18
+19    <uses-permission android:name="android.permission.INTERNET" />
+19-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:9:5-67
+19-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:9:22-64
+20    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+20-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:10:5-71
+20-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:10:22-68
+21    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+21-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:11:5-80
+21-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:11:22-77
+22    <uses-permission android:name="android.permission.BLUETOOTH" />
+22-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:12:5-68
+22-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:12:22-65
+23
+24    <uses-feature
+24-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:14:5-16:35
+25        android:name="android.hardware.vulkan.version"
+25-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:15:9-55
+26        android:required="true" />
+26-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:16:9-32
+27    <uses-feature
+27-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:17:5-19:36
+28        android:name="android.hardware.microphone"
+28-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:18:9-51
+29        android:required="false" />
+29-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:19:9-33
+30    <uses-feature
+30-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:20:5-22:36
+31        android:name="android.hardware.touchscreen"
+31-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:21:9-52
+32        android:required="false" />
+32-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:22:9-33
+33    <uses-feature
+33-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:23:5-25:36
+34        android:name="android.hardware.touchscreen.multitouch"
+34-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:24:9-63
+35        android:required="false" />
+35-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:25:9-33
+36    <uses-feature
+36-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:26:5-28:36
+37        android:name="android.hardware.touchscreen.multitouch.distinct"
+37-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:27:9-72
+38        android:required="false" />
+38-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:28:9-33
+39    <uses-feature
+39-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:29:5-32:31
+40        android:name="android.hardware.vr.headtracking"
+40-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:30:9-56
+41        android:required="true"
+41-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:31:9-32
+42        android:version="1" />
+42-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:32:9-28
+43
+44    <application
+44-->/Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/launcher/src/main/AndroidManifest.xml:3:3-83
+45        android:extractNativeLibs="true"
+45-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:34:18-50
+46        android:icon="@mipmap/app_icon"
+46-->/Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/launcher/src/main/AndroidManifest.xml:3:49-80
+47        android:label="@string/app_name" >
+47-->/Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/launcher/src/main/AndroidManifest.xml:3:16-48
+48        <meta-data
+48-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:35:9-37:33
+49            android:name="unity.splash-mode"
+49-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:36:13-45
+50            android:value="0" />
+50-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:37:13-30
+51        <meta-data
+51-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:38:9-40:36
+52            android:name="unity.splash-enable"
+52-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:39:13-47
+53            android:value="True" />
+53-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:40:13-33
+54        <meta-data
+54-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:41:9-43:36
+55            android:name="unity.launch-fullscreen"
+55-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:42:13-51
+56            android:value="True" />
+56-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:43:13-33
+57        <meta-data
+57-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:44:9-46:36
+58            android:name="unity.render-outside-safearea"
+58-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:45:13-57
+59            android:value="True" />
+59-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:46:13-33
+60        <meta-data
+60-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:47:9-49:50
+61            android:name="notch.config"
+61-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:48:13-40
+62            android:value="portrait|landscape" />
+62-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:49:13-47
+63        <meta-data
+63-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:50:9-52:36
+64            android:name="unity.auto-report-fully-drawn"
+64-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:51:13-57
+65            android:value="true" />
+65-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:52:13-33
+66
+67        <activity
+67-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:54:9-80:20
+68            android:name="com.unity3d.player.UnityPlayerActivity"
+68-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:55:13-66
+69            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|uiMode|density"
+69-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:56:13-122
+70            android:exported="true"
+70-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:57:13-36
+71            android:hardwareAccelerated="false"
+71-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:58:13-48
+72            android:launchMode="singleTask"
+72-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:59:13-44
+73            android:resizeableActivity="false"
+73-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:60:13-47
+74            android:screenOrientation="landscape"
+74-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:61:13-50
+75            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen" >
+75-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:62:13-77
+76            <intent-filter>
+76-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:63:13-69:29
+77                <category android:name="android.intent.category.LAUNCHER" />
+77-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:64:17-77
+77-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:64:27-74
+78
+79                <action android:name="android.intent.action.MAIN" />
+79-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:66:17-69
+79-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:66:25-66
+80
+81                <category android:name="com.oculus.intent.category.VR" />
+81-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:68:17-74
+81-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:68:27-71
+82            </intent-filter>
+83
+84            <meta-data
+84-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:71:13-73:40
+85                android:name="unityplayer.UnityActivity"
+85-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:72:17-57
+86                android:value="true" />
+86-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:73:17-37
+87            <meta-data
+87-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:74:13-76:40
+88                android:name="notch_support"
+88-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:75:17-45
+89                android:value="true" />
+89-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:76:17-37
+90            <meta-data
+90-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:77:13-79:40
+91                android:name="com.oculus.vr.focusaware"
+91-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:78:17-56
+92                android:value="true" />
+92-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:79:17-37
+93        </activity>
+94
+95        <meta-data
+95-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:82:9-84:39
+96            android:name="com.samsung.android.vr.application.mode"
+96-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:83:13-67
+97            android:value="vr_only" />
+97-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:84:13-36
+98        <meta-data
+98-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:85:9-87:37
+99            android:name="com.unity.xr.oculus.LowOverheadMode"
+99-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:86:13-63
+100            android:value="false" />
+100-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:87:13-34
+101        <meta-data
+101-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:88:9-90:37
+102            android:name="com.unity.xr.oculus.LateLatching"
+102-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:89:13-60
+103            android:value="false" />
+103-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:90:13-34
+104        <meta-data
+104-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:91:9-93:37
+105            android:name="com.unity.xr.oculus.LateLatchingDebug"
+105-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:92:13-65
+106            android:value="false" />
+106-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:93:13-34
+107        <meta-data
+107-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:94:9-96:46
+108            android:name="com.oculus.supportedDevices"
+108-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:95:13-55
+109            android:value="quest2|cambria" />
+109-->[:unityLibrary] /Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/merged_manifest/release/AndroidManifest.xml:96:13-43
+110    </application>
+111
+112</manifest>

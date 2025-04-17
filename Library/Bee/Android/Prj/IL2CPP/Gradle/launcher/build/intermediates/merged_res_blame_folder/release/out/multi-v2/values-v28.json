@@ -1,0 +1,20 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.unity.template.vr.launcher-mergeReleaseResources-3:/values-v28/values-v28.xml",
+            "map": [
+                {
+                    "source": "/Users/diaadem/Downloads/CS/3DUI&AR/LMM_SFNM/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/packaged_res/release/values-v28/values-v28.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endLines": "4",
+                        "endColumns": "8",
+                        "endOffsets": "229"
+                    }
+                }
+            ]
+        }
+    ]
+}
