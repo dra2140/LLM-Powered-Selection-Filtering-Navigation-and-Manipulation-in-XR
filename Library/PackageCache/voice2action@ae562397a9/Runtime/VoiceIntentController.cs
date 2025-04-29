@@ -14,7 +14,7 @@ namespace Voice2Action
     /// <summary>
     /// The main class of Voice2Action, contains all core required components for the system. <br/>
     /// This class is not inheritable, instead, the user wants to inherit each individual components for customizable behaviors. <br/>
-    /// This is a minimal implementation, we will add function re-ordering, rejection sampling, and alignment training with environment and user feedback in future package version. <br/>
+    //// This is a minimal implementation, we will add function re-ordering, rejection sampling, and alignment training with environment and user feedback in future package version. <br/>
     /// The "LLM for Pre-Processing" step in Voice2Action is omitted here by adapting OpenAI Whisper voice recognition.
     /// </summary>
     public class VoiceIntentController : MonoBehaviour
@@ -22,88 +22,88 @@ namespace Voice2Action
         /// <value>Controls user voice input activation.</value>
         [Header("Input Action Property")]
         [SerializeField] private InputActionProperty m_VoiceActivateAction;
-        
+
         /// <value>Resets Expand Panel.</value>
         [SerializeField] private InputActionProperty m_ExpandResetAction;
 
         /// <value>The instance of "LLM for Classification".</value>
         [Header("Voice2Action Property")]
         [SerializeField] private PropertyClassifier m_PropertyClassifier;
-        
+
         /// <value>The instance of "LLM for Extraction".</value>
         [SerializeField] private PropertyExtractor m_PropertyExtractor;
-        
+
         /// <value>The instance of "LLM for Execution".</value>
         [SerializeField] private PropertyExecutor m_PropertyExecutor;
 
         /// <value>All history conversations of users vs. AI.</value>
         [Header("UI")]
         [SerializeField] private GameObject m_Voice2ActionGUIScrollText;
-        
+
         /// <value>The instance of the Speaking Feedback Panel that indicates whether "speaking mode" is activated.</value>
         [SerializeField] private GameObject m_SpeakingFeedbackPanel;
 
         /// <value>The instance of SceneManager.</value>
         [SerializeField] private SceneManager m_SceneManager;
-        
+
         /// <value>[Debug] Displayed on the top left of the scene in play mode.</value>
         [SerializeField] private GUIStyle m_MessageGUI;
-        
+
         [Header("Custom Interactable")]
         [SerializeField] private GameObject m_Interactable;
-        
+
         [SerializeField] private GameObject m_MyInteractable;
-        
+
         [Header("Custom Action")]
         [SerializeField] private Embeddings m_MyEmbeddings;
-        
+
         [SerializeField] private ShapeController m_MyShapeController;
-        
+
         /// <value>Type of user-defined Embeddings.</value>
         private Type m_MyEmbeddingsType;
-        
+
         /// <value>Type of user-defined ShapeController.</value>
         private Type m_MyShapeControllerType;
-        
+
         /// <value>All candidate objects that are interactable in the Voice2Action pipeline.</value>
         private ShapeController[] m_AllControllers;
-        
+
         /// <value>Selected object indexes in the current frame.</value>
         private bool[] m_SelectedControllers;
 
         /// <value>Fade state. If true, non-selected objects are faded.</value>
-        [Header("Fade In Fade Out")] 
+        [Header("Fade In Fade Out")]
         private bool m_FadeActive;
-        
+
         /// <value>Total clock length to fade.</value>
         private const float k_FadeDuration = 2f;
-        
+
         /// <value>Current clock length to fade.</value>
         private float m_FadeTimer;
-        
+
         /// <value>Most recent user message.</value>
         [Header("Text Params")]
         private string m_UserMessage;
-        
+
         /// <value>Most recent AI message.</value>
         private string m_OpenAIMessage;
-        
+
         /// <value>Most recent message (well-formatted).</value>
         private string m_FormattedMessage;
-        
+
         /// <value>ALl history conversation messages.</value>
         private List<string> m_HistoryMessages;
-        
+
         /// <value>[Debug] Denote model status.</value>
         private bool m_OpenAIStatus;
-        
+
         /// <value>Audio source for listening user voice signal.</value>
         [Header("Audio Params")]
         private AudioSource m_AudioSource;
-        
+
         /// <value>Processed user voice signal.</value>
         private byte[] m_Bytes;
-        
+
         // <value>[Debug] Denote voice recognition status.</value>
         // private bool m_AppVoiceActive; // <Debug Code>
 
@@ -154,7 +154,7 @@ namespace Voice2Action
             get => m_MyShapeController;
             set => m_MyShapeController = value;
         }
-        
+
         private void Awake()
         {
             m_MyShapeControllerType = myShapeController.GetType();
@@ -164,14 +164,14 @@ namespace Voice2Action
             myEmbeddings.InitProperty(m_PropertyClassifier, m_PropertyExtractor, m_PropertyExecutor);
             myEmbeddings.InitInteractable(interactable, m_MyShapeControllerType);
             myEmbeddings.InitMyInteractable(interactable, myInteractable, m_MyShapeControllerType);
-            
+
             List<string> propertyFunctionNames = new List<string>();
             propertyFunctionNames.AddRange(m_PropertyExtractor.selectionGroup.properties);
             propertyFunctionNames.AddRange(m_PropertyExtractor.modificationGroup.properties);
             m_ToolDict = m_PropertyExecutor.InitFunctionCalls(m_MyShapeControllerType, propertyFunctionNames);
             ShapeController.player = m_SceneManager.xrOriginCamera.gameObject;
             InteractableTarget.sceneManager = m_SceneManager;
-            
+
             m_AllControllers = FindObjectsOfType<ShapeController>();
             m_SelectedControllers = new bool[m_AllControllers.Length];
             for (int i = 0; i < m_SelectedControllers.Length; i++) m_SelectedControllers[i] = true;
@@ -195,28 +195,44 @@ namespace Voice2Action
             };
             m_VoiceActivateAction.action.canceled += async _ =>
             {
-                // m_AppVoiceActive = false; // <Debug Code>
                 m_SpeakingFeedbackPanel.SetActive(false);
                 Debug.Log("OnAction Canceled");
+
                 if (Utils.openAIClient == null)
                 {
+                    var config = Resources.Load<OpenAIConfiguration>("OpenAIConfiguration");
+                    if (config == null)
+                    {
+                        Debug.LogError("❌ Could not load OpenAIConfiguration from Resources.");
+                        return;
+                    }
+
                     try
                     {
-                        Utils.openAIClient = new OpenAIClient();
+                        Utils.openAIClient = new OpenAIClient(
+                            new OpenAIAuthentication(config.ApiKey, config.OrganizationId)
+                        );
+                        Debug.Log("✅ OpenAIClient initialized with configuration.");
                     }
                     catch (Exception e)
                     {
-                        Debug.Log(e);
-                        throw;
+                        Debug.LogError("❌ Exception while initializing OpenAIClient:\n" + e);
+                        return;
                     }
                 }
+
                 m_UserMessage = await CallWhisper(m_AudioSource.clip);
-                if (m_UserMessage != Utils.k_FailureResponse) await CallVoice2Action(m_UserMessage);
+                if (m_UserMessage != Utils.k_FailureResponse)
+                {
+                    await CallVoice2Action(m_UserMessage);
+                }
             };
-            m_ExpandResetAction.action.started += _ => ResetExpand();
+
+            // Keep your other action hookup
+            //m_ExpandResetAction.action.started += _ => ResetExpand();
         }
 
-        private void Update()
+            private void Update()
         {
             if (m_FadeActive)
             {
@@ -259,7 +275,7 @@ namespace Voice2Action
 
             return ret;
         }
-        
+
         /// <summary>
         /// Entry point for calling Whisper from the OpenAI API, which translates audio clip to text.
         /// </summary>
@@ -294,10 +310,10 @@ namespace Voice2Action
         {
             m_HistoryMessages.Add("<color=white>User:</color> <color=green>" + prompt + "</color>\n");
             UpdateMessageDisplay("<color=white>User:</color> <color=green>" + prompt + "</color>", m_Voice2ActionGUIScrollText);
-            
+
             // First classify the property
             Dictionary<string, string> classifyDict = await m_PropertyClassifier.ClassifyProperty(prompt);
-            
+
             // Handle selection
             if (classifyDict.TryGetValue("select", out string selectionInput))
             {
@@ -313,8 +329,8 @@ namespace Voice2Action
                 {
                     m_OpenAIStatus = true;
                     ResetControllers();
-                    m_SelectedControllers = await m_PropertyExecutor.ExecuteProperty(selectDict, m_ToolDict, 
-                        m_MyShapeControllerType, m_AllControllers, m_SelectedControllers, 
+                    m_SelectedControllers = await m_PropertyExecutor.ExecuteProperty(selectDict, m_ToolDict,
+                        m_MyShapeControllerType, m_AllControllers, m_SelectedControllers,
                         m_MyEmbeddingsType, myEmbeddings,
                         m_HistoryMessages);
                     m_FadeActive = true;
@@ -340,8 +356,8 @@ namespace Voice2Action
             if (classifyDict.TryGetValue("modify", out string modificationInput))
             {
                 OrderedDictionary modifyDict = await m_PropertyExtractor.ExtractProperty("modify", modificationInput);
-                m_SelectedControllers = await m_PropertyExecutor.ExecuteProperty(modifyDict, m_ToolDict, 
-                    m_MyShapeControllerType, m_AllControllers, m_SelectedControllers, 
+                m_SelectedControllers = await m_PropertyExecutor.ExecuteProperty(modifyDict, m_ToolDict,
+                    m_MyShapeControllerType, m_AllControllers, m_SelectedControllers,
                     m_MyEmbeddingsType, myEmbeddings,
                     m_HistoryMessages);
                 var countControllers = 0;
@@ -382,7 +398,7 @@ namespace Voice2Action
             }
             return output;
         }
-        
+
         /// <summary>
         /// Utility function to perform chat completion with the OpenAI API.
         /// </summary>
@@ -546,13 +562,15 @@ namespace Voice2Action
         /// </summary>
         private void ResetExpand()
         {
-            m_SceneManager.ClearProxies();
-            m_SceneManager.expandPanel.SetActive(false);
-            for (int i = 0; i < m_SelectedControllers.Length; i++)
-            {
-                m_SelectedControllers[i] = true;
-            }
-            m_FadeActive = true;
+            Debug.Log("🛑 Expand panel disabled.");
+
+           // m_SceneManager.ClearProxies();
+           // m_SceneManager.expandPanel.SetActive(false);
+            //for (int i = 0; i < m_SelectedControllers.Length; i++)
+            //{
+            //    m_SelectedControllers[i] = true;
+            //}
+           // m_FadeActive = true;
         }
 
         /// <summary>

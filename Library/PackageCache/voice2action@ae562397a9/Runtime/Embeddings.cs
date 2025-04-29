@@ -3,9 +3,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
+using OpenAI;
+using Unity.XR.CoreUtils;
 using UnityEngine;
 using UnityEngine.Assertions;
+using UnityEngine.Networking;
 
 
 namespace Voice2Action
@@ -133,6 +138,10 @@ namespace Voice2Action
                 // each line of the file is expected to be formatted as
                 // {property_name},{embed_dim_1},{embed_dim_2},...,{embed_dim_{Utils.k_EmbeddingDim - 1}}
                 var parts = line.Split(',');
+                if (parts.Length != Utils.k_EmbeddingDim + 1)
+                {
+                    continue;
+                }
                 Assert.AreEqual(parts.Length, Utils.k_EmbeddingDim + 1);
                 var propertyName = parts[0];
                 List<double> propertyEmbedding = new List<double>();
@@ -144,20 +153,35 @@ namespace Voice2Action
             }
             // save remaining content of propertyMap to both propertyMapData and local file for future reuse
             int debugCount = 0;
-            await using (var writer = new StreamWriter(filePath, true))
+            const int maxRetries = 5;
+            const int delayBetweenRetriesMs = 100;
+            for (int retry = 0; retry < maxRetries; retry++)
             {
-                foreach (var propertyName in propertyMap.Keys)
+                try
                 {
-                    if (propertyMapData.ContainsKey(propertyName)) continue;
-                    IReadOnlyList<double> propertyEmbedding = await VoiceIntentController.CallEmbedding(propertyName);
-                    propertyMapData[propertyName] = propertyEmbedding;
-                    string propertyData = propertyName;
-                    for (int i = 0; i < Utils.k_EmbeddingDim; i++)
+                    await using (var writer = new StreamWriter(filePath, true))
                     {
-                        propertyData += "," + propertyEmbedding[i].ToString("G");
+                        // Your existing logic for writing to the file
+                        foreach (var propertyName in propertyMap.Keys.ToList())
+                        {
+                            if (propertyMapData.ContainsKey(propertyName)) continue;
+                            IReadOnlyList<double> propertyEmbedding = await VoiceIntentController.CallEmbedding(propertyName);
+                            propertyMapData[propertyName] = propertyEmbedding;
+                            string propertyData = propertyName;
+                            for (int i = 0; i < Utils.k_EmbeddingDim; i++)
+                            {
+                                propertyData += "," + propertyEmbedding[i].ToString("G");
+                            }
+                            await writer.WriteLineAsync(propertyData);
+                            debugCount += 1;
+                        }
                     }
-                    await writer.WriteLineAsync(propertyData);
-                    debugCount += 1;
+                    break; // Exit the retry loop if successful
+                }
+                catch (IOException ex) when (retry < maxRetries - 1)
+                {
+                    Debug.LogWarning($"IOException encountered: {ex.Message}. Retrying in {delayBetweenRetriesMs}ms...");
+                    await Task.Delay(delayBetweenRetriesMs);
                 }
             }
             m_EmbeddingMap[propertyMapName] = propertyMapData;
@@ -184,6 +208,182 @@ namespace Voice2Action
             }
             return dotProduct / (Math.Sqrt(normA) * Math.Sqrt(normB));
         }
+        
+        public class GetShapeObjects
+        {
+            public List<GetShapeObject> objects { get; set; }
+        }
+
+        public class GetShapeObject
+        {
+            public int GameObjectID { get; set; }
+            public string Name { get; set; }
+            public Vector3 RelativePosition { get; set; }
+            public Quaternion RelativeRotation { get; set; }        }
+        
+        private void UpdateGetShapeObjectsTransforms(GetShapeObjects targetObjects)
+        {
+            var xrOrigin = FindObjectOfType<XROrigin>();
+            if (xrOrigin == null)
+            {
+                Debug.LogWarning("XROrigin not found in the scene.");
+                return;
+            }
+
+            foreach (var obj in targetObjects.objects)
+            {
+                GameObject targetObject = GameObject.Find(obj.Name);
+                if (targetObject != null)
+                {
+                    obj.RelativePosition = xrOrigin.transform.InverseTransformPoint(targetObject.transform.position);
+                    obj.RelativeRotation = Quaternion.Inverse(xrOrigin.transform.rotation) * targetObject.transform.rotation;
+                }
+                else
+                {
+                    Debug.LogWarning($"GameObject with  ID {obj.GameObjectID} not found.");
+                }
+            }
+        }
+        
+        public class ChatResponse
+        {
+            [JsonProperty("choices")]
+            public List<ChatChoice> Choices { get; set; }
+        }
+
+        public class ChatChoice
+        {
+            [JsonProperty("message")]
+            public ChatMessage Message { get; set; }
+        }
+
+        public class ChatMessage
+        {
+            [JsonProperty("content")]
+            public string Content { get; set; }
+        }
+        
+        public class LabeledObject
+        {
+            public int GameObjectID { get; set; }
+        }
+
+        public class LabeledObjectRoot
+        {
+            public List<LabeledObject> root { get; set; }
+        }
+
+        public async Task<string[]> GetClosestShapes(string userInput)
+        {
+            string filePath = Path.Combine(Application.dataPath, "objectsSeen.json");
+            if (!File.Exists(filePath))
+            {
+                Debug.LogWarning($"JSON file at {filePath} does not exist");
+                return Array.Empty<string>();
+            }
+
+            string jsonContent = File.ReadAllText(filePath);
+            GetShapeObjects targetObjects = JsonConvert.DeserializeObject<GetShapeObjects>(jsonContent);
+            UpdateGetShapeObjectsTransforms(targetObjects);
+            // Convert the objects to a string format
+            string[] gameObjectsText = targetObjects.objects.Select(obj =>
+                $"{{ \"GameObjectID\": {obj.GameObjectID}, \"Name\": \"{obj.Name}\", \"RelativePosition to user\": [{obj.RelativePosition.x}, {obj.RelativePosition.y}, {obj.RelativePosition.z}], \"RelativeRotation to user\": [{obj.RelativeRotation.x}, {obj.RelativeRotation.y}, {obj.RelativeRotation.z}, {obj.RelativeRotation.w}] }}").ToArray();
+            string gameObjectsTextString = string.Join(", ", gameObjectsText);
+            Debug.Log("GameObjects: " + gameObjectsTextString);
+            
+            string url = "https://api.openai.com/v1/chat/completions";
+
+            var requestData = new
+            {
+                model = "gpt-4.1",
+                messages = new[]
+                {
+                    new
+                    {
+                        role = "user",
+                        content = new object[]
+                        {
+                            new
+                            {
+                                type = "text",
+                                text = $"You are analyzing a userInput describing what they want to do in a Unity game world, along with a list of objects in a 3D scene and their 3D transforms. Your task is to review the userInput and determine the GameObjectIDs that are most closely related to what the user wants to do. For example, if the userInput is about selecting all buses that are nearby, return the GameObjectIDs of objects that are relatively close to the user and have names indicating they are buses, based on their relative positions and transforms. \n\nThe userInput is: {userInput}. Here are the objects in the game world: {gameObjectsTextString}"
+                            }
+                        }
+                    }
+                },
+                response_format = new
+                {
+                    type = "json_schema",
+                    json_schema = new
+                    {
+                        name = "object_labeling_response",
+                        schema = new
+                        {
+                            type = "object",
+                            properties = new
+                            {
+                                root = new
+                                {
+                                    type = "array",
+                                    items = new
+                                    {
+                                        type = "object",
+                                        properties = new
+                                        {
+                                            GameObjectID = new { type = "integer" }
+                                        },
+                                        required = new[] { "GameObjectID" },
+                                        additionalProperties = false
+                                    }
+                                }
+                            },
+                            required = new[] { "root" },
+                            additionalProperties = false
+                        },
+                        strict = true
+                    }
+                }
+            };
+
+            string jsonData = JsonConvert.SerializeObject(requestData); //gets rid of the 400 ba request errors
+            Debug.Log("Request JSON: " + jsonData);
+
+            byte[] bodyRaw = Encoding.UTF8.GetBytes(jsonData);
+            UnityWebRequest request = new UnityWebRequest(url, "POST");
+            request.uploadHandler = new UploadHandlerRaw(bodyRaw);
+            request.downloadHandler = new DownloadHandlerBuffer();
+            request.SetRequestHeader("Content-Type", "application/json");
+            request.SetRequestHeader("Authorization", "Bearer " + Resources.Load<OpenAIConfiguration>("OpenAIConfiguration").ApiKey);
+
+
+            var operation = request.SendWebRequest();
+            while (!operation.isDone)
+            {
+                await Task.Yield();
+            }
+
+            if (request.result == UnityWebRequest.Result.Success)
+            {
+                Debug.Log("Response: " + request.downloadHandler.text);
+                ChatResponse jsonResponse = JsonConvert.DeserializeObject<ChatResponse>(request.downloadHandler.text);
+                if (jsonResponse != null && jsonResponse.Choices != null && jsonResponse.Choices.Count > 0)
+                {
+                    string response = jsonResponse.Choices[0].Message.Content;
+
+                    LabeledObjectRoot parsed = JsonConvert.DeserializeObject<LabeledObjectRoot>(response);
+                    List<LabeledObject> labeledObjects = parsed.root;
+                    string[] gameObjectIDs = labeledObjects.Select(obj => obj.GameObjectID.ToString()).ToArray();
+                    string[] matchingNames = targetObjects.objects
+                        .Where(obj => gameObjectIDs.Contains(obj.GameObjectID.ToString()))
+                        .Select(obj => obj.Name)
+                        .ToArray();
+                    Debug.Log("Matching GameObject Names: " + string.Join(", ", matchingNames));
+                    return matchingNames;
+                }
+            }
+            Debug.LogError("Error: " + request.error);
+            return Array.Empty<string>();
+        }
 
         /// <summary>
         /// Get closest embedding match by retrieval.
@@ -203,10 +403,18 @@ namespace Voice2Action
                 return (retName, maxSimilarity);
             }
             // fetch query embedding
+            Debug.Log("Get Embedding Query: " + userInput);
             IReadOnlyList<double> queryVector = await VoiceIntentController.CallEmbedding(userInput);
             foreach (var (targetName, targetVector) in targetVectors)
             {
+                if (targetName == "object")
+                {
+                    // skip the default object type
+                    continue;
+                }
+                Debug.Log("Get Embedding Target: " + targetName);
                 double similarity = GetCosSimilarity(queryVector, targetVector);
+                Debug.Log($"Get Embedding Cosine Similarity: {similarity}");
                 if (similarity > maxSimilarity)
                 {
                     maxSimilarity = similarity;
@@ -284,11 +492,12 @@ namespace Voice2Action
         /// <param name="myShapeControllerType">Type of user-defined ShapeController.</param>
         public void InitInteractable(GameObject parentInteractable, Type myShapeControllerType)
         {
-            foreach (Transform category in parentInteractable.transform)
+            foreach (Transform obj in parentInteractable.transform)
             {
-                var parentShapeType = category.gameObject.name;
-                shapeMap[parentShapeType] = parentShapeType;
-                foreach (Transform instance in category) InitInstance(instance.gameObject, parentShapeType, myShapeControllerType);
+                //var shape = obj.gameObject.name;
+                //shapeMap[shape] = shape;
+                //foreach (Transform instance in category)
+                InitInstance(obj.gameObject, "placeholder", myShapeControllerType);
             }
         }
         
@@ -300,5 +509,24 @@ namespace Voice2Action
         /// <param name="myParentInteractable">Optional (can be null), user-defined game object that holds all interactable targets.</param>
         /// <param name="myShapeControllerType">Type of user-defined ShapeController.</param>
         public virtual void InitMyInteractable(GameObject defaultParentInteractable, GameObject myParentInteractable, Type myShapeControllerType) {}
+
+        public void AddToShapeMap(IEnumerable<string> shapeNames)
+        {
+            foreach (var shape in shapeNames)
+            {
+                if (!shapeMap.ContainsKey(shape))
+                {
+                    shapeMap[shape] = shape;
+                }
+            }
+        }
+        public void PrintShapeMapKeys()
+        {
+            Debug.Log("🔑 shapeMap keys: " + string.Join(", ", shapeMap.Keys));
+        }
+
+
     }
+
+
 }

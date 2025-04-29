@@ -120,20 +120,27 @@ namespace Voice2Action
                 proxy.transform.parent = m_ParentExpandedObjects.transform;
                 
                 // change size of the object so that it fits within the canvas
-                var bounds = original.shapeCollider.bounds;
-                var expandWidthRatio = bounds.size.x / m_PanelWidth;
-                var expandHeightRatio = bounds.size.y / m_PanelHeight;
-                var expandLengthRatio = bounds.size.z / Mathf.Min(m_PanelWidth, m_PanelHeight);
-                proxy.transform.localScale /= Mathf.Max(expandHeightRatio, expandWidthRatio, expandLengthRatio);
+                try
+                {
+                    var bounds = original.shapeCollider.bounds;
+                    var expandWidthRatio = bounds.size.x / m_PanelWidth;
+                    var expandHeightRatio = bounds.size.y / m_PanelHeight;
+                    var expandLengthRatio = bounds.size.z / Mathf.Min(m_PanelWidth, m_PanelHeight);
+                    proxy.transform.localScale /= Mathf.Max(expandHeightRatio, expandWidthRatio, expandLengthRatio);
 
-                // change position of proxy object
-                var panelTransform = m_ExpandPanel.transform;
-                // - 4 * panelTransform.right - 6 * panelTransform.forward
-                var xIndex = i % 4;
-                var yIndex = i / 4;
-                var targetPosition = panelTransform.position + new Vector3 ((-3 + 2 * xIndex) * m_PanelWidth, (2 * yIndex - 1) * m_PanelHeight, -0.05f);
-                // lerp proxy to expand panel
-                proxy.interactableTarget.SetVariablesForLerp(targetPosition);
+                    // change position of proxy object
+                    var panelTransform = m_ExpandPanel.transform;
+                    // - 4 * panelTransform.right - 6 * panelTransform.forward
+                    var xIndex = i % 4;
+                    var yIndex = i / 4;
+                    var targetPosition = panelTransform.position + new Vector3 ((-3 + 2 * xIndex) * m_PanelWidth, (2 * yIndex - 1) * m_PanelHeight, -0.05f);
+                    // lerp proxy to expand panel
+                    proxy.interactableTarget.SetVariablesForLerp(targetPosition);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"❌ Failed to update proxy position: {e}");
+                }
             }
             m_ListExpandObject.Clear();
         }

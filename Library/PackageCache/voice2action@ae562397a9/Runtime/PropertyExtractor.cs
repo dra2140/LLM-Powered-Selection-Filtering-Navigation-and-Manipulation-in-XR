@@ -15,7 +15,7 @@ namespace Voice2Action
     {
         [SerializeField]
         private Utils.FewShotGroup m_SelectionGroup = new(
-            instruction: "Extract actions {} from the input, separate by comma.",
+            instruction: "Extract actions {} from the input, separate by comma. For GetShape, be as descriptive about the shape to retrieve as possible",
             indicators: new List<string>
             {
                 "If some actions do not exist, do not print.",

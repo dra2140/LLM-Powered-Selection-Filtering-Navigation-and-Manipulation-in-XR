@@ -11,11 +11,43 @@ namespace Voice2Action
     /// </summary>
     public static class Utils
     {
+
+
+
+        public static bool EnsureOpenAIClient()
+        {
+            if (openAIClient != null)
+                return true;
+
+            var config = Resources.Load<OpenAIConfiguration>("OpenAIConfiguration");
+            if (config == null)
+            {
+                Debug.LogWarning("🟡 OpenAIConfiguration not found yet. Try again later.");
+                return false;
+            }
+
+            try
+            {
+                openAIClient = new OpenAIClient(
+                    new OpenAIAuthentication(config.ApiKey, config.OrganizationId)
+                );
+                Debug.Log("✅ OpenAIClient initialized.");
+                return true;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("❌ Failed to initialize OpenAIClient:\n" + e);
+                return false;
+            }
+        }
+
+
+
         /// <value>The entry for all OpenAI API requests.</value>
         public static OpenAIClient openAIClient { get; set; }
 
         /// <value>The chat model type used in Voice2Action.</value>
-        public static readonly Model k_ChatModel = Model.GPT3_5_Turbo;
+        public static readonly Model k_ChatModel = Model.GPT4o;
         
         /// <summary>
         /// Temperature parameter of the OpenAI CompletionAPI, lower means that the output is more deterministic.
@@ -196,6 +228,7 @@ namespace Voice2Action
                 ret += "Output:\n";
                 return ret;
             }
+
         }
     }
 }

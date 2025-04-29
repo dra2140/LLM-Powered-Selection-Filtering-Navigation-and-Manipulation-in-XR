@@ -473,7 +473,11 @@ namespace Voice2Action
             {
                 var functionName = (string) propertyKey;
                 var userInput = (string) propertyDict[functionName];
+                Debug.Log("Function name: " + functionName);
+                Debug.Log("User input: " + userInput);
                 var methodInfo = myShapeControllerType.GetMethod(functionName);
+                // If it's GetShape, override...
+                
                 // it is the user's responsibility to write the desired atomic function
                 if (methodInfo == null)
                 {
@@ -582,51 +586,61 @@ namespace Voice2Action
                         Debug.LogWarning($"failed to process propertyMap embedding with name {propertyName}");
                         continue;
                     }
-                    var (classificationOutput, similarity) = await embeddings.GetEmbedding(userInput, propertyName);
-                    Debug.Log($"{functionName} classificationOutput: {classificationOutput}, confidence: {similarity}");
+                    // var (classificationOutput, similarity) = await embeddings.GetEmbedding(userInput, propertyName);
+                    // Debug.Log($"{functionName} classificationOutput: {classificationOutput}, confidence: {similarity}");
+                    string[] output = await embeddings.GetClosestShapes(userInput);
+                    var classificationOutput = "";
+                    var similarity = 1.0;
                     // handle model failure in classification
                     if (classificationOutput == Utils.k_FailureResponse) continue;
                     if (similarity < Utils.k_MinConfidenceToProceed) continue;
-                    if (!fieldDict.TryGetValue(classificationOutput, out object propertyValue))
+                    // if (!fieldDict.TryGetValue(classificationOutput, out object propertyValue))
+                    // {
+                    //     // this should never happen now as we use embedding matches
+                    //     Debug.LogWarning($"model fails to classify {userInput} into one of {fieldDict.Keys}");
+                    //     continue;
+                    // }
+                    // parameters = new []{ propertyValue };
+                    List<string> matchedProperties = new List<string>();
+                    foreach (var item in output)
                     {
-                        // this should never happen now as we use embedding matches
-                        Debug.LogWarning($"model fails to classify {userInput} into one of {fieldDict.Keys}");
-                        continue;
+                        matchedProperties.Add(item);
                     }
-                    parameters = new []{ propertyValue };
+                    parameters = new []{ matchedProperties.ToArray() };
                 }
                 // function calling to each controller
+                Debug.Log("Attenmpting to select...");
                 var otherControllerIdx = -1;
                 for (var i = 0; i < allControllers.Length; i++)
                 {
                     if (!selectedControllers[i]) continue;
                     
-                    // Check the type of the object by checking its parent
-                    Transform parent = allControllers[i].transform.parent;
-                    if (parent != null)
-                    {
-                        // Check for specific shape types
-                        if (parent.name == "Spheres")
-                        {
-                            // If it's a sphere, keep it selected
-                            selectedControllers[i] = true;
-                        }
-                        else if (parent.name == "Cubes")
-                        {
-                            // If it's a cube, keep it selected
-                            selectedControllers[i] = true;
-                        }
-                        else if (parent.name == "Buildings")
-                        {
-                            // If it's a rectangle, keep it selected
-                            selectedControllers[i] = true;
-                        }
-                        else
-                        {
-                            // If it's not a specific shape type, deselect it
-                            selectedControllers[i] = false;
-                        }
-                    }
+                    // // Check the type of the object by checking its parent
+                    // Transform parent = allControllers[i].transform.parent;
+                    // if (parent != null)
+                    // {
+                    //     // Check for specific shape types
+                    //     if (parent.name == "Spheres")
+                    //     {
+                    //         // If it's a sphere, keep it selected
+                    //         selectedControllers[i] = true;
+                    //     }
+                    //     else if (parent.name == "Cubes")
+                    //     {
+                    //         // If it's a cube, keep it selected
+                    //         selectedControllers[i] = true;
+                    //     }
+                    //     else if (parent.name == "Buildings")
+                    //     {
+                    //         // If it's a rectangle, keep it selected
+                    //         selectedControllers[i] = true;
+                    //     }
+                    //     else
+                    //     {
+                    //         // If it's not a specific shape type, deselect it
+                    //         selectedControllers[i] = false;
+                    //     }
+                    // }
                     
                     if (comparisonPos != -1)
                     {

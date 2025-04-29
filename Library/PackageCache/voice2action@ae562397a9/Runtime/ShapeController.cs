@@ -13,16 +13,16 @@ namespace Voice2Action
     public class ShapeController : MonoBehaviour
     {
         /// <value>String formatted information of this ShapeController.</value>
-        private (string, string) [] m_Info;
+        private (string, string)[] m_Info;
 
         /// <value>Is this ShapeController properly initialized, for debugging purpose.</value>
         private bool m_IsInit;
-        
+
         /// <value>The game object that represents the user.</value>
         public static GameObject player { get; set; }
-        
+
         [SerializeField] private string m_Shape;
-        
+
         /// <value>Object type of the attached game object, customizable by the user.</value>
         public string shape { get => m_Shape; set => m_Shape = value; }
 
@@ -45,7 +45,13 @@ namespace Voice2Action
         {
             grabInteractable = GetComponent<UnityEngine.XR.Interaction.Toolkit.Interactables.XRGrabInteractable>();
             interactableTarget = GetComponent<InteractableTarget>();
-            shapeCollider = GetComponent<Collider>();
+            var collider = GetComponent<Collider>();
+            if (!TryGetComponent(out collider))
+            {
+                collider = gameObject.AddComponent<BoxCollider>();
+            }
+            shapeCollider = collider;
+            Debug.Log("ShapeCollider is null: " + (shapeCollider == null));
             renderers = new List<Renderer>(GetComponentsInChildren<Renderer>());
             if (GetComponent<Renderer>() != null) renderers.Add(GetComponent<Renderer>());
             m_IsInit = true;
@@ -54,7 +60,7 @@ namespace Voice2Action
         /// <summary>
         /// Initializes user-defined properties of the attached game object, needs to be called right after class initialization.
         /// </summary>
-        public virtual void InitMyShape() {}
+        public virtual void InitMyShape() { }
 
         /// <summary>
         /// Add Transparency to the game object's material if they exist, used for visualization.
@@ -66,7 +72,7 @@ namespace Voice2Action
 
             // only fade-in fade-out for the real objects
             if (interactableTarget.isProxy) return;
-            
+
             foreach (var renderer1 in renderers)
             {
                 var material = renderer1.material;
@@ -80,8 +86,8 @@ namespace Voice2Action
                 // Set the material to use the Transparent mode
                 material.SetFloat(modeID, 3);
                 // Set up source and destination blend factors for transparency
-                material.SetInt(srcBlendID, (int) BlendMode.SrcAlpha);
-                material.SetInt(dstBlendID, (int) BlendMode.OneMinusSrcAlpha);
+                material.SetInt(srcBlendID, (int)BlendMode.SrcAlpha);
+                material.SetInt(dstBlendID, (int)BlendMode.OneMinusSrcAlpha);
                 // Disable writing to the Z buffer
                 material.SetInt(zWriteID, 0);
                 // Adjust the alpha value of the color as needed
@@ -95,7 +101,7 @@ namespace Voice2Action
                 material.renderQueue = 3000;
             }
         }
-        
+
         /// <returns>Selected properties of current game object for visualization, user can customize its behavior by overriding this function.</returns>
         public virtual (string, string)[] GetShapeInfo()
         {
@@ -103,14 +109,14 @@ namespace Voice2Action
             var playerPosition = player.transform.position;
             var myDistance = Mathf.Sqrt(Mathf.Pow(myPosition.x - playerPosition.x, 2) + Mathf.Pow(myPosition.z - playerPosition.z, 2));
             var myScale = transform.localScale;
-            
+
             var positionInfo = ("Position", myPosition.ToString());
             var distanceInfo = ("Distance", myDistance.ToString("F"));
             var scaleInfo = ("Scale", myScale.ToString());
             m_Info = new[] { positionInfo, distanceInfo, scaleInfo };
             return m_Info;
         }
-        
+
         /// <summary>
         /// Used for specifying atomic functions that are doing embedding matches. <br/>
         /// i.e. Suppose there is a function that does FindObjectWithProperty(property), where property belongs to a list of discrete candidates (we will call them propertyMappings). <br/>
@@ -125,17 +131,17 @@ namespace Voice2Action
             /// <value>The name of the propertyMappings field in (My)Embeddings, they will be called with reflection during function execution.</value>
             public string property
             {
-                get => m_Property; 
+                get => m_Property;
                 set => m_Property = value;
             }
-            
+
             /// <param name="property">The name of the propertyMappings field in (My)Embeddings.</param>
             public PropertyMethodAttribute(string property)
             {
                 m_Property = property;
             }
         }
-        
+
         /// <summary>
         /// Used for customizing the behavior of certain parameters in atomic functions.
         /// </summary>
@@ -143,35 +149,57 @@ namespace Voice2Action
         public class PropertyParameterAttribute : Attribute
         {
             private string m_Property;
-            
+
             /// <value>Behavior customization type of parameters.</value>
             /// (TODO: we will implement more customizable behaviors in future package version)
             public string property
             {
-                get => m_Property; 
+                get => m_Property;
                 set => m_Property = value;
             }
-            
+
             /// <param name="property">Behavior customization type of parameters.</param>
             public PropertyParameterAttribute(string property)
             {
                 m_Property = property;
             }
         }
-        
+
         // atomic functions for selection
         #region SelectionControll
-        
+
         /// <summary>
         /// Select object with matching shapes (object types).
         /// </summary>
-        /// <param name="otherShape">The shape to compare to.</param>
+        /// <param name="otherShapes">The shapes to compare to.</param>
         /// <returns>Denote selection success.</returns>
+        /*
+        1. GetShape will now take an array of other shapes, and still return bool
+        2. Replace the embeddigncall with a LLM call instead that returns an array of strings
+        */
         [PropertyMethod("shapeMap")]
-        public bool GetShape(string otherShape)
+        public bool GetShape(string[] otherShapes)
         {
-            return otherShape == Embeddings.k_DefaultShape || otherShape == shape;
+            Debug.Log($"🔍 Comparing shapes: [Input: {string.Join(", ", otherShapes)}] vs [This object: {shape}]");
+            // if (otherShape == Embeddings.k_DefaultShape)
+            // {
+            //     Debug.Log("✅ Matched default shape.");
+            //     return true;
+            // }
+
+            foreach (var otherShape in otherShapes)
+            {
+                if (otherShape == shape)
+                {
+                    Debug.Log("✅ Matched shape!");
+                    return true;
+                }
+            }
+
+            Debug.Log("❌ No shape match.");
+            return false;
         }
+
 
         /// <summary>
         /// Select object of certain distance ranges wrt. the user.
@@ -191,7 +219,7 @@ namespace Voice2Action
                        Mathf.Abs(controllerPosition.z - playerPosition.z);
             return start <= diff && diff <= end;
         }
-        
+
         /// <summary>
         /// Select object of certain direction wrt. the user.
         /// </summary>
@@ -258,13 +286,13 @@ namespace Voice2Action
         {
             var currentScale = transform.localScale;
             var newScale = currentScale * (1 + Mathf.Abs(value));
-            
+
             // If value is negative, we're scaling down
             if (value < 0)
             {
                 newScale = currentScale / (1 + Mathf.Abs(value));
             }
-            
+
             transform.localScale = newScale;
             return true;
         }
@@ -279,7 +307,7 @@ namespace Voice2Action
             var playerPosition = player.transform.position;
             var controllerPosition = transform.position;
             float moveAmount = 0.5f; // Base movement amount
-            
+
             if (value < 0)
             {
                 // Move left (negative X)
@@ -290,7 +318,7 @@ namespace Voice2Action
                 // Move right (positive X)
                 controllerPosition.x += moveAmount;
             }
-            
+
             transform.position = controllerPosition;
             return true;
         }
@@ -305,7 +333,7 @@ namespace Voice2Action
             var playerPosition = player.transform.position;
             var controllerPosition = transform.position;
             float moveAmount = 0.5f; // Base movement amount
-            
+
             if (value < 0)
             {
                 // Move down (negative Y)
@@ -316,7 +344,7 @@ namespace Voice2Action
                 // Move up (positive Y)
                 controllerPosition.y += moveAmount;
             }
-            
+
             transform.position = controllerPosition;
             return true;
         }
@@ -330,7 +358,7 @@ namespace Voice2Action
         {
             var playerPosition = player.transform.position;
             var controllerPosition = transform.position;
-            
+
             if (value < 0)
             {
                 // Move backward (away from player)
@@ -341,11 +369,11 @@ namespace Voice2Action
                 // Move forward (toward player)
                 controllerPosition.z -= value / (1 + value) * (controllerPosition.z - playerPosition.z);
             }
-            
+
             transform.position = controllerPosition;
             return true;
         }
-
+        
         /// <summary>
         /// Modify the position of current object.
         /// </summary>
