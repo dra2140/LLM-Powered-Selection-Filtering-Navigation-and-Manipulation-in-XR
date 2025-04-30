@@ -25,6 +25,7 @@ namespace Voice2Action
                 (0, "select"),
                 // order: TBD
                 (10, "modify"),
+                (20, "travel"),
             },
             fewShotPairs: new List<Utils.FewShotPair>
             {
@@ -40,6 +41,54 @@ namespace Voice2Action
                     "throw it away",
                     "modify: throw it away"
                 ),
+                new(
+                    "travel to that object",
+                    "travel: travel to that object"
+                ),
+                new(
+                    "teleport to the selected object",
+                    "travel: teleport to the selected object"
+                ),
+                new(
+                    "move to the left by five",
+                    "modify: move to the left by five"
+                ),
+                new(
+                    "move the cube up by three",
+                    "modify: move the cube up by three"
+                ),
+                new(
+                    "go to the red building",
+                    "travel: go to the red building"
+                ),
+                new (
+                    "rotate the cube 90 degrees around x axis",
+                    "modify: rotate the cube 90 degrees around x axis"
+                ),
+                new (
+                    "turn the object left by 45 degrees",
+                    "modify: turn the object left by 45 degrees"
+                ),
+                new (
+                    "rotate by 45 degrees",
+                    "modify: rotate by 45 degrees"
+                ),
+                new (
+                    "rotate clockwise",
+                    "modify: rotate clockwise"
+                ),
+                new (
+                    "turn right 90 degrees",
+                    "modify: turn right 90 degrees"
+                ),
+                new (
+                    "spin it around",
+                    "modify: spin it around"
+                ),
+                new (
+                    "rotate",
+                    "modify: rotate"
+                )
             }
         );
         
