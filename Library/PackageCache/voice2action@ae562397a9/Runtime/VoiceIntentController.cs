@@ -375,6 +375,32 @@ namespace Voice2Action
                     m_FormattedMessage = PrintHistory(m_HistoryMessages);
                 }
             }
+
+            // Add the new travel handling here
+            if (classifyDict.TryGetValue("travel", out string travelInput))
+            {
+                OrderedDictionary travelDict = await m_PropertyExtractor.ExtractProperty("travel", travelInput);
+                if (travelDict.Count > 0)  // Check if we successfully extracted travel properties
+                {
+                    if (CanQuickTravel())
+                    {
+                        QuickTravel();
+                        m_HistoryMessages.Add("<color=white>Assistant:</color> <color=green>Teleported to selected object</color>\n");
+                        UpdateMessageDisplay("<color=white>Assistant:</color> <color=green>Teleported to selected object</color>", m_Voice2ActionGUIScrollText);
+                    }
+                    else
+                    {
+                        m_HistoryMessages.Add("<color=white>Assistant:</color> <color=red>Cannot teleport - please select exactly one object</color>\n");
+                        UpdateMessageDisplay("<color=white>Assistant:</color> <color=red>Cannot teleport - please select exactly one object</color>", m_Voice2ActionGUIScrollText);
+                    }
+                }
+                else
+                {
+                    m_HistoryMessages.Add("<color=white>Assistant:</color> <color=red>Could not extract travel properties</color>\n");
+                    UpdateMessageDisplay("<color=white>Assistant:</color> <color=red>Could not extract travel properties</color>", m_Voice2ActionGUIScrollText);
+                }
+                m_FormattedMessage = PrintHistory(m_HistoryMessages);
+            }
         }
 
         /// <summary>
@@ -439,7 +465,7 @@ namespace Voice2Action
                 new
                 {
                     name = "ModifyPositionX",
-                    description = "Move the selected object left or right along the X axis. Use negative values for left, positive for right.",
+                    description = "Move the selected object left or right. Convert all numeric words to numbers (e.g. 'five' → 5). Use negative values for left, positive for right.",
                     parameters = new
                     {
                         type = "object",
@@ -448,7 +474,7 @@ namespace Voice2Action
                             value = new
                             {
                                 type = "number",
-                                description = "X-axis movement: -1 for left, 1 for right, 0 for no movement"
+                                description = "Movement magnitude in units. ALWAYS convert word numbers to digits (e.g. 'five' → 5, 'by two' → 2). For descriptive terms: small='1', medium='3', large='5'. Negative for left, positive for right."
                             }
                         },
                         required = new[] { "value" }
@@ -457,7 +483,7 @@ namespace Voice2Action
                 new
                 {
                     name = "ModifyPositionY",
-                    description = "Move the selected object up or down along the Y axis. Use negative values for down, positive for up.",
+                    description = "Move the selected object up or down. Convert all numeric words to numbers (e.g. 'five' → 5). Use negative values for down, positive for up.",
                     parameters = new
                     {
                         type = "object",
@@ -466,7 +492,7 @@ namespace Voice2Action
                             value = new
                             {
                                 type = "number",
-                                description = "Y-axis movement: -1 for down, 1 for up, 0 for no movement"
+                                description = "Movement magnitude in units. ALWAYS convert word numbers to digits (e.g. 'five' → 5, 'by two' → 2). For descriptive terms: small='1', medium='3', large='5'. Negative for down, positive for up."
                             }
                         },
                         required = new[] { "value" }
@@ -475,7 +501,7 @@ namespace Voice2Action
                 new
                 {
                     name = "ModifyPositionZ",
-                    description = "Move the selected object forward or backward along the Z axis. Use negative values for backward, positive for forward.",
+                    description = "Move the selected object forward or backward. Convert all numeric words to numbers (e.g. 'five' → 5). Use negative values for backward, positive for forward.",
                     parameters = new
                     {
                         type = "object",
@@ -484,7 +510,7 @@ namespace Voice2Action
                             value = new
                             {
                                 type = "number",
-                                description = "Z-axis movement: -1 for backward, 1 for forward, 0 for no movement"
+                                description = "Movement magnitude in units. ALWAYS convert word numbers to digits (e.g. 'five' → 5, 'by two' → 2). For descriptive terms: small='1', medium='3', large='5'. Negative for backward, positive for forward."
                             }
                         },
                         required = new[] { "value" }
@@ -493,7 +519,7 @@ namespace Voice2Action
                 new
                 {
                     name = "ModifyScale",
-                    description = "Change the size of the selected object. Use negative values to make smaller, positive to make larger.",
+                    description = "Change the size of the selected object. Convert all numeric words to numbers (e.g. 'five times' → 5). Use negative values to shrink, positive to grow.",
                     parameters = new
                     {
                         type = "object",
@@ -502,7 +528,7 @@ namespace Voice2Action
                             value = new
                             {
                                 type = "number",
-                                description = "Scale factor: negative to decrease size, positive to increase size"
+                                description = "Scale factor. ALWAYS convert word numbers to digits (e.g. 'five times' → 5, 'twice' → 2, 'double' → 2). For descriptive terms: small='0.5', medium='1', large='2'."
                             }
                         },
                         required = new[] { "value" }
@@ -512,36 +538,57 @@ namespace Voice2Action
 
             var messages = new List<Message>
             {
-                new Message(Role.System, "You are a helpful assistant that converts voice commands into object manipulation actions. " +
-                    "For movement commands, use the appropriate ModifyPosition tool for the desired axis: " +
-                    "ModifyPositionX for left/right movement, ModifyPositionY for up/down movement, ModifyPositionZ for forward/backward movement. " +
-                    "Use values between -1 and 1 for all movement commands. " +
-                    "For size changes, use the ModifyScale tool with values between -1 and 1. " +
-                    "Always respond with a valid function call using one of the provided tools."),
+                new Message(Role.System, 
+                    "You are a precise command interpreter that converts natural language into exact numerical values and actions. " +
+                    "Your primary task is to extract numbers and actions from user commands.\n\n" +
+                    "Number Conversion Rules:\n" +
+                    "1. ALWAYS convert word numbers to digits:\n" +
+                    "   - 'five' → 5\n" +
+                    "   - 'by two' → 2\n" +
+                    "   - 'twice' → 2\n" +
+                    "   - 'double' → 2\n" +
+                    "   - 'triple' → 3\n" +
+                    "2. For descriptive terms:\n" +
+                    "   - small/slightly/a bit → 1\n" +
+                    "   - medium/more/further → 3\n" +
+                    "   - large/far/much → 5\n" +
+                    "3. Direction determines sign:\n" +
+                    "   - left/down/backward → negative\n" +
+                    "   - right/up/forward → positive\n\n" +
+                    "Examples:\n" +
+                    "- 'move left by five' → ModifyPositionX with value=-5\n" +
+                    "- 'scale up three times' → ModifyScale with value=3\n" +
+                    "- 'move slightly to the right' → ModifyPositionX with value=1\n" +
+                    "- 'make it twice as big' → ModifyScale with value=2"),
                 new Message(Role.User, userInput)
             };
 
             var chatRequest = new ChatRequest(messages, tools: availableTools, model: Utils.k_ChatModel, temperature: Utils.k_CompletionTemperature);
             string output = Utils.k_FailureResponse;
+            
             try
             {
                 var chatResponse = await Utils.openAIClient.ChatEndpoint.GetCompletionAsync(chatRequest);
-                if (chatResponse?.FirstChoice?.Message?.ToolCalls != null && chatResponse.FirstChoice.Message.ToolCalls.Count > 0)
+                if (chatResponse?.FirstChoice?.Message?.ToolCalls != null && 
+                    chatResponse.FirstChoice.Message.ToolCalls.Count > 0)
                 {
                     var usedTool = chatResponse.FirstChoice.Message.ToolCalls[0];
-                    Debug.Log($"Tool used | Function Name: {usedTool.Function.Name} | Response: {usedTool.Function.Arguments} | Finish Reason: {chatResponse.FirstChoice.FinishReason}");
+                    Debug.Log($"Tool used | Function Name: {usedTool.Function.Name} | " +
+                             $"Response: {usedTool.Function.Arguments} | " +
+                             $"Finish Reason: {chatResponse.FirstChoice.FinishReason}");
                     output = usedTool.Function.Arguments.ToString();
                 }
                 else
                 {
-                    // TODO: improve this to support multi-turn conversations
-                    Debug.LogWarning($"Tool not used | Response: {chatResponse?.FirstChoice} | Finish Reason: {chatResponse?.FirstChoice?.FinishReason}");
+                    Debug.LogWarning($"Tool not used | Response: {chatResponse?.FirstChoice} | " +
+                                   $"Finish Reason: {chatResponse?.FirstChoice?.FinishReason}");
                 }
             }
             catch (Exception e)
             {
                 Debug.LogWarning("Exception in CallCompletionWithTools:\n" + e);
             }
+            
             return output;
         }
 
@@ -556,6 +603,59 @@ namespace Voice2Action
             }
             m_SceneManager.ClearProxies();
         }
+
+        public bool CanQuickTravel()
+        {
+            int selectedCount = 0;
+            for (int i = 0; i < m_SelectedControllers.Length; i++)
+            {
+                if (m_SelectedControllers[i])
+                    selectedCount++;
+            }
+            return selectedCount == 1;
+        } 
+
+        public void QuickTravel()
+        {
+            // Find the selected object
+            ShapeController selectedController = null;
+            for (int i = 0; i < m_AllControllers.Length; i++)
+            {
+                if (m_SelectedControllers[i])
+                {
+                    selectedController = m_AllControllers[i];
+                    break;
+                }
+            }
+
+            if (selectedController == null)
+                return;
+
+            // Get the target position (object's position)
+            Vector3 targetPosition = selectedController.transform.position;
+            
+            // Calculate an offset position in front of the object
+            // Use the object's forward direction or a default offset
+            Vector3 offset = Vector3.forward * 2f; // 2 units in front
+            Vector3 teleportPosition = targetPosition - offset;
+            
+            // Set the XR Origin position
+            if (m_SceneManager != null && m_SceneManager.xrOriginCamera != null)
+            {
+                // Get the height difference to maintain the player's height
+                float heightDifference = m_SceneManager.xrOriginCamera.transform.position.y - 
+                                    m_SceneManager.xrOriginCamera.transform.parent.position.y;
+                
+                // Set the XR Origin position, maintaining the height
+                m_SceneManager.xrOriginCamera.transform.parent.position = new Vector3(
+                    teleportPosition.x,
+                    teleportPosition.y - heightDifference,
+                    teleportPosition.z
+                );
+            }
+        }
+              
+
 
         /// <summary>
         /// This method is manually invoked when the user wants to reset the expand panel.
