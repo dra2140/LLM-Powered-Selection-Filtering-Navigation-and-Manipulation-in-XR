@@ -304,18 +304,15 @@ namespace Voice2Action
         /// <returns>Denote modification success.</returns>
         public bool ModifyPositionX(float value)
         {
-            var playerPosition = player.transform.position;
             var controllerPosition = transform.position;
-            float moveAmount = 0.5f; // Base movement amount
+            float moveAmount = Mathf.Abs(value); // Use the actual magnitude from the command
 
             if (value < 0)
             {
-                // Move left (negative X)
                 controllerPosition.x -= moveAmount;
             }
             else
             {
-                // Move right (positive X)
                 controllerPosition.x += moveAmount;
             }
 
@@ -330,18 +327,15 @@ namespace Voice2Action
         /// <returns>Denote modification success.</returns>
         public bool ModifyPositionY(float value)
         {
-            var playerPosition = player.transform.position;
             var controllerPosition = transform.position;
-            float moveAmount = 0.5f; // Base movement amount
+            float moveAmount = Mathf.Abs(value); // Use the actual magnitude from the command
 
             if (value < 0)
             {
-                // Move down (negative Y)
                 controllerPosition.y -= moveAmount;
             }
             else
             {
-                // Move up (positive Y)
                 controllerPosition.y += moveAmount;
             }
 
@@ -356,34 +350,45 @@ namespace Voice2Action
         /// <returns>Denote modification success.</returns>
         public bool ModifyPositionZ(float value)
         {
-            var playerPosition = player.transform.position;
             var controllerPosition = transform.position;
+            float moveAmount = Mathf.Abs(value); // Use the actual magnitude from the command
 
             if (value < 0)
             {
-                // Move backward (away from player)
-                controllerPosition.z += -value / (1 - value) * (controllerPosition.z - playerPosition.z);
+                controllerPosition.z -= moveAmount;
             }
             else
             {
-                // Move forward (toward player)
-                controllerPosition.z -= value / (1 + value) * (controllerPosition.z - playerPosition.z);
+                controllerPosition.z += moveAmount;
             }
 
             transform.position = controllerPosition;
             return true;
         }
         
-        /// <summary>
-        /// Modify the position of current object.
-        /// </summary>
-        /// <param name="value">1-DOF magnitude of modification wrt. to the user.</param>
-        /// <returns>Denote modification success.</returns>
-        // public bool ModifyPosition(float value)
-        // {
-        //     // For backward compatibility, default to Y-axis movement
-        //     return ModifyPositionY(value);
-        // }
+        public bool ModifyRotationX(float value)
+        {
+            var currentRotation = transform.eulerAngles;
+            currentRotation.x += value;
+            transform.eulerAngles = currentRotation;
+            return true;
+        }
+
+        public bool ModifyRotationY(float value)
+        {
+            var currentRotation = transform.eulerAngles;
+            currentRotation.y += value;
+            transform.eulerAngles = currentRotation;
+            return true;
+        }
+
+        public bool ModifyRotationZ(float value)
+        {
+            var currentRotation = transform.eulerAngles;
+            currentRotation.z += value;
+            transform.eulerAngles = currentRotation;
+            return true;
+        }
 
         #endregion
     }
