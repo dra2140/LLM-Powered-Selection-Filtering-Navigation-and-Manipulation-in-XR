@@ -222,6 +222,7 @@ public class SceneAdjustment : MonoBehaviour
             prefabRoots.Add(JsonConvert.SerializeObject(new
             {
                 GameObjectID = parentObject.gameObject.GetInstanceID(),
+                GameObjectName = parentObject.name,
                 Transform = new
                 {
                     Position = new { x = relativePosition.x, y = relativePosition.y, z = relativePosition.z },
@@ -382,7 +383,7 @@ public class SceneAdjustment : MonoBehaviour
 
         var requestData = new
         {
-            model = "gpt-4.1",
+            model = "gpt-4.1-mini",
             messages = new[]
             {
                 new
@@ -399,7 +400,7 @@ public class SceneAdjustment : MonoBehaviour
 
                             Only name the objects listed below. Do not name any objects you see in the image that are not in the list.
 
-                            Use descriptive sentences to describe each object. Try to describe each object with at least 2 sentences
+                            Use descriptive sentences to describe each object. Try to describe each object with at least 2 sentences. Be sure the capture descriptive qualities about each object, such as: color, texture, shape, material, nearby objects, etc.
 
                             Return a list like this:
                             [
