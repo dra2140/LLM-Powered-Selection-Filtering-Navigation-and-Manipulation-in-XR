@@ -1,678 +1,374 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Reflection;
 using System.Threading.Tasks;
-using System.Text;
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json;
-// using NJsonSchema;
-using OpenAI;
 using UnityEngine;
 
 namespace Voice2Action
 {
     /// <summary>
-    /// A minimal implementation of the "LLM for Execution" step in Voice2Action. <br/>
+    /// A minimal implementation of the "LLM for Extraction" step in Voice2Action. <br/>
     /// This implementation is not optimized and only used for inference. <br/>
-    /// We will add reward modeling, atomic function generation and alignment training via user feedback of the model in future package version.
+    /// We will add atomic action property generation, alignment training via order ranking and environment feedback of the model in future package version. <br/>
     /// </summary>
-    public class PropertyExecutor: MonoBehaviour
+    public class PropertyExtractor: MonoBehaviour
     {
         [SerializeField]
-        private List<FunctionCallGroup> m_FunctionCallGroups = new()
-        {
-            // ------------Added for CityDemo in MyShapeController, user can define their own through code or hierarchy------------
-            // new FunctionCallGroup(
-            //     functionName: "GetColor",
-            //     functionDescription: "Extract the RGB value of given color."
-            // ),
-            // ------------Added for CityDemo in MyShapeController, user can define their own through code or hierarchy------------
-            new FunctionCallGroup(
-                functionName: "GetDistance",
-                functionDescription: "Extract the start and end range."
-            ),
-            new FunctionCallGroup(
-                functionName: "GetDirection",
-                functionDescription: "Extract the 3-DOF change in direction",
-                functionParams: new List<FunctionParamGroup>
-                {
-                    new (
-                        paramName: "direction",
-                        paramExamples: new List<Utils.FewShotPair>
-                        {
-                            new (input: "left", output: "[-1, 0, 0]"),
-                            new (input: "in front of", output: "[0, 0, 1]"),
-                            new (input: "below", output: "[0, -1, 0]"),
-                        }),
-                }),
-            new FunctionCallGroup(
-                functionName: "GetSuperlative",
-                functionDescription: "Given a superlative adjective, extract the 6-DOF change in size and position.",
-                functionParams: new List<FunctionParamGroup>
-                {
-                    new (
-                        paramName: "size",
-                        paramExamples: new List<Utils.FewShotPair>
-                        {
-                            new (input: "highest", output: "[0, 1, 0]"),
-                        }),
-                    new (
-                        paramName: "position",
-                        paramExamples: new List<Utils.FewShotPair>
-                        {
-                            new (input: "closest", output: "[-1, -1, -1]"),
-                        }),
-                }),
-            // ------------Added for CityDemo in MyShapeController, user can define their own through code or hierarchy------------
-            // new FunctionCallGroup(
-            //     functionName: "ModifyColor",
-            //     functionDescription: "Return the RGB value of given color."
-            // ),
-            // ------------Added for CityDemo in MyShapeController, user can define their own through code or hierarchy------------
-            new FunctionCallGroup(
-                functionName: "ModifyScale",
-                functionDescription: "Return the size change in x-axis width, y-axis height, z-axis width.",
-                functionParams: new List<FunctionParamGroup>
-                {
-                    new (
-                        paramName: "size",
-                        paramExamples: new List<Utils.FewShotPair>
-                        {
-                            new (input: "bigger", output: "[1, 1, 1]"),
-                            new (input: "very narrow", output: "[-2, 0, -2]"),
-                            new (input: "a bit taller", output: "[0, 0.5, 0]"),
-                        }
-                    ),
-                }),
-            new FunctionCallGroup(
-                functionName: "ModifyPositionX",
-                functionDescription: "Return the X-axis positional change.",
-                functionParams: new List<FunctionParamGroup>
-                {
-                    new (
-                        paramName: "value",
-                        paramDescription: "the strength of modification.",
-                        paramExamples: new List<Utils.FewShotPair>
-                        {
-                            new (input: "left", output: "-1"),
-                            new (input: "right", output: "1"),
-                            new (input: "to the left", output: "-1"),
-                        }
-                    ),
-                }),
-            new FunctionCallGroup(
-                functionName: "ModifyPositionY",
-                functionDescription: "Return the Y-axis positional change.",
-                functionParams: new List<FunctionParamGroup>
-                {
-                    new (
-                        paramName: "value",
-                        paramDescription: "the strength of modification.",
-                        paramExamples: new List<Utils.FewShotPair>
-                        {
-                            new (input: "up", output: "1"),
-                            new (input: "down", output: "-1"),
-                            new (input: "higher", output: "1"),
-                        }
-                    ),
-                }),
-            new FunctionCallGroup(
-                functionName: "ModifyPositionZ",
-                functionDescription: "Return the Z-axis positional change.",
-                functionParams: new List<FunctionParamGroup>
-                {
-                    new (
-                        paramName: "value",
-                        paramDescription: "the strength of modification.",
-                        paramExamples: new List<Utils.FewShotPair>
-                        {
-                            new (input: "forward", output: "1"),
-                            new (input: "backward", output: "-1"),
-                            new (input: "closer", output: "-1"),
-                        }
-                    ),
-                }),
-        };
+        private Utils.FewShotGroup m_SelectionGroup = new(
+            instruction: "Extract actions {} from the input, separate by comma. For GetShape, be as descriptive about the shape to retrieve as possible",
+            indicators: new List<string>
+            {
+                "If some actions do not exist, do not print.",
+            },
+            orderedProperties: new List<(int, string)>
+            {
+                // ------------Added for CityDemo in MyShapeController, user can define their own through code or hierarchy------------
+                // RGB values
+                // example instances: "red", "green", "dark blue", "cyan", "light yellow", "white", "colorful",
+                // (10, "GetColor"),
+                // embedding matches
+                // example instances: "XXX Street", "YYY Ave",
+                // (10, "GetAddress"),
+                // ------------Added for CityDemo in MyShapeController, user can define their own through code or hierarchy------------
+                
+                // embedding matches
+                // example instances: "capsule", "cube", "cylinder",
+                (10, "GetShape"),
+                // 3-DOF position transform to the player
+                // example instances: "left", "right", "north", "south", "west", "east", "top", "bottom",
+                (10, "GetDirection"), 
+                // 2 numbers denoting the range of the position to the player
+                // example instances: "within x meters", "a to b meters", "at least y meters", "around me", "somewhere",
+                (10, "GetDistance"),
+                // 6-DOF transform (3-DOF for scale, 3-DOF for position)
+                // example instances: "furthest", "smallest", "longest", "highest",
+                // order: must be the last performed action
+                (int.MaxValue, "GetSuperlative"),
+            },
+            fewShotPairs: new List<Utils.FewShotPair>
+            {
+                // ------------Added for CityDemo in MyShapeController, user can define their own through code or hierarchy------------
+                // new (
+                //     "get yellow houses",
+                //     "GetColor: yellow, GetShape: houses"
+                // ),
+                // new (
+                //     "select this building on albert street",
+                //     "GetShape: this building, GetAddress: albert street"
+                // ),
+                // ------------Added for CityDemo in MyShapeController, user can define their own through code or hierarchy------------
+                new (
+                    "I want the rightmost car around me",
+                    "GetSuperlative: rightmost, GetShape: car, GetDistance: around me"
+                ),
+                new (
+                    "signs at least five m on my left",
+                    "GetShape: signs, GetDistance: at least five m, GetDirection: on my left"
+                ),
+            }
+        );
+        
+        [SerializeField]
+        private Utils.FewShotGroup m_ModificationGroup = new(
+            instruction: "Extract actions {} from the input, separate by comma.",
+            indicators: new List<string>
+            {
+                "If some actions do not exist, do not print anything."
+            },
+            orderedProperties: new List<(int, string)>
+            {
+                // 3-DOF transform
+                // example instances: "taller", "much bigger", "a bit smaller",
+                (10, "ModifyScale"),
+                // X-axis position transform
+                // example instances: "left", "right", "to the left", "to the right",
+                (10, "ModifyPositionX"),
+                // Y-axis position transform
+                // example instances: "up", "down", "higher", "lower",
+                (10, "ModifyPositionY"),
+                // Z-axis position transform
+                // example instances: "forward", "backward", "closer", "further",
+                (10, "ModifyPositionZ"),
+                (10, "ModifyRotationX"),
+                (10, "ModifyRotationY"),
+                (10, "ModifyRotationZ")
+            },
+            fewShotPairs: new List<Utils.FewShotPair>
+            {
+                new (
+                    "make it a bit taller and move it to the left",
+                    "ModifyScale: a bit taller, ModifyPositionX: left"
+                ),
+                new (
+                    "make them shorter and move them up",
+                    "ModifyScale: shorter, ModifyPositionY: up"
+                ),
+                new (
+                    "move it to the left",
+                    "ModifyPositionX: left"
+                ),
+                new (
+                    "move it higher",
+                    "ModifyPositionY: up"
+                ),
+                new (
+                    "move it backward",
+                    "ModifyPositionZ: backward"
+                ),
+                new (
+                    "move the spheres higher",
+                    "ModifyPositionY: higher"
+                ),
+                new (
+                    "move the objects up",
+                    "ModifyPositionY: up"
+                ),
+                new (
+                    "move them down",
+                    "ModifyPositionY: down"
+                ),
+                new (
+                    "move everything to the right",
+                    "ModifyPositionX: right"
+                ),
+                new (
+                    "move all objects forward",
+                    "ModifyPositionZ: forward"
+                ),
+                new (
+                    "rotate the cube 90 degrees around x axis",
+                    "ModifyRotationX: 90"
+                ),
+                new (
+                    "turn the object left by 45 degrees",
+                    "ModifyRotationY: -45"
+                ),
+                new (
+                    "rotate the cube 90 degrees around z axis",
+                    "ModifyRotationZ: 90"
+                ),
+                new (
+                    "rotate the cube 90 degrees around y axis",
+                    "ModifyRotationY: 90"
+                ),
+                new (
+                    "turn left 45 degrees",
+                    "ModifyRotationX: -45"
+                ),
+                new (
+                    "rotate by 45 degrees",
+                    "ModifyRotationY: 45"
+                ),
+                new (
+                    "rotate clockwise",
+                    "ModifyRotationY: -90"
+                ),
+                new (
+                    "rotate",
+                    "ModifyRotationY: 90"
+                ),
+                new (
+                    "spin around",
+                    "ModifyRotationY: 180"
+                )
 
-        /// <value>Contains atomic property functions for the model to use, along with function and parameter description and their example usage.</value>
-        public List<FunctionCallGroup> functionCallGroups
+            }
+        );
+
+        [SerializeField]
+        private Utils.FewShotGroup m_TravelGroup = new(
+            instruction: "Extract actions {} from the input, separate by comma.",
+            indicators: new List<string>
+            {
+                "If some actions do not exist, do not print.",
+            },
+            orderedProperties: new List<(int, string)>
+            {
+                (10, "TravelToObject"),
+            },
+            fewShotPairs: new List<Utils.FewShotPair>
+            {
+                new(
+                    "travel to that object",
+                    "TravelToObject: that object"
+                ),
+                new(
+                    "teleport to the selected object",
+                    "TravelToObject: selected object"
+                ),
+                new (
+                    "go to the red building",
+                    "TravelToObject: red building"
+                )
+            }
+        );
+        
+        /// <value>Contains the available atomic action properties to interact with for selection and their example usage.</value>
+        /// <example>
+        /// Extract actions {"GetShape", "GetColor", "GetDirection", "GetDistance", "GetSuperlative"} from the input, separate by comma. <br/>
+        /// If some actions do not exist, do not print anything. <br/>
+        /// Input: <br/>
+        /// {more input examples} <br/>
+        /// Output: <br/>
+        /// {more output examples} <br/>
+        /// ... {add some more if there's budget} <br/>
+        /// Input: <br/>
+        /// {userInput} <br/>
+        /// Output: <br/>
+        /// </example>
+        public Utils.FewShotGroup selectionGroup
         {
-            get => m_FunctionCallGroups;
-            set => m_FunctionCallGroups = value;
+            get => m_SelectionGroup;
+            set => m_SelectionGroup = value;
+        }
+
+                public Utils.FewShotGroup travelGroup
+        {
+            get => m_TravelGroup;
+            set => m_TravelGroup = value;
         }
         
-        /// <value>System instruction for the execution model.</value>
-        public const string k_ExecutionInstruction =
-            "You are a function calling assistant. Your task is to convert user instructions into structured function calls using ONLY the provided functions. You must respond with a function call - do not provide any other text or explanation. Each response must use exactly one of the available functions.";
+        /// <value>Contains the available atomic action properties to interact with for modification and their example usage.</value>
+        /// <example>
+        /// Extract actions {"ModifyScale", "ModifyPositionX", "ModifyPositionY", "ModifyPositionZ"} from the input, separate by comma. <br/>
+        /// If some actions do not exist, do not print anything. <br/>
+        /// Input: <br/>
+        /// {more input examples} <br/>
+        /// Output: <br/>
+        /// {more output examples} <br/>
+        /// ... {add some more if there's budget} <br/>
+        /// Input: <br/>
+        /// {userInput} <br/>
+        /// Output: <br/>
+        /// </example>
+        public Utils.FewShotGroup modificationGroup
+        {
+            get => m_ModificationGroup;
+            set => m_ModificationGroup = value;
+        }
+        
+        /// <param name="action">The action that userInput belongs to.</param>
+        /// <param name="userInput">Input user instruction.</param>
+        /// <returns>Formatted extraction input.</returns>
+        private string GetExtractionPrompt(string action, string userInput)
+        {
+            if (action == "select") return m_SelectionGroup.GetPrompt(userInput);
+            if (action == "modify") return m_ModificationGroup.GetPrompt(userInput);
+            if (action == "travel") return m_TravelGroup.GetPrompt(userInput);
+            Debug.LogWarning("action class does not exist: " + action);
+            return Utils.k_FailureResponse;
+        }
         
         /// <summary>
-        /// A group containing essential elements for executing a property function.
+        /// Add new atomic action property to the extractor, used for customized properties. <br/>
+        /// The user may also want to AddExtractExamples(...) to ensure accurate results. <br/>
         /// </summary>
-        [Serializable]
-        public struct FunctionCallGroup
+        /// <param name="action">The action that newAtomicAction belongs to.</param>
+        /// <param name="order">Order of extraction of the new atomic action.</param>
+        /// <param name="newAtomicAction">The new atomic action.</param>
+        public void AddAtomicAction(string action, int order, string newAtomicAction)
         {
-            [SerializeField] private string m_Name;
-            [SerializeField] private string m_Description;
-            [SerializeField] private List<FunctionParamGroup> m_ParamGroups;
-
-            /// <value>Function name.</value>
-            public string name 
-            { 
-                get => m_Name; 
-                set => m_Name = value; 
-            }
-    
-            /// <value>Function description.</value>
-            public string description 
-            { 
-                get => m_Description; 
-                set => m_Description = value; 
-            }
-    
-            /// <value>Optional, function parameters.</value>
-            public List<FunctionParamGroup> paramGroups 
-            { 
-                get => m_ParamGroups; 
-                set => m_ParamGroups = value ?? new List<FunctionParamGroup>(); 
-            }
-            
-            /// <param name="functionName">Function name, i.e. MyFunctionName(...)</param>
-            /// <param name="functionDescription">Function description, a summarization of its functionality. </param>
-            /// <param name="functionParams">Optional, function parameters, nested with all of their information.</param>
-            public FunctionCallGroup(string functionName, string functionDescription, List<FunctionParamGroup> functionParams = null)
+            if (action == "select")
             {
-                m_Name = functionName;
-                m_Description = functionDescription;
-                m_ParamGroups = functionParams;
-                m_ParamGroups ??= new List<FunctionParamGroup>(); // if null, initialize to empty
+                m_SelectionGroup.orders.Add(order);
+                m_SelectionGroup.properties.Add(newAtomicAction);
             }
-
-            /// <summary>
-            /// Add the "required" key in the given JsonSchema.
-            /// </summary>
-            /// <param name="funcObject">The JsonSchema of the current property function, will be updated upon execution of this method.</param>
-            public void AddParamsRequirement(ref JObject funcObject)
+            else if (action == "modify")
             {
-                var requiredParams = new JArray();
-                foreach (var paramGroup in paramGroups)
-                {
-                    if (paramGroup.required) requiredParams.Add(paramGroup.name);
-                }
-                funcObject.Add("required", requiredParams);
+                m_ModificationGroup.orders.Add(order);
+                m_ModificationGroup.properties.Add(newAtomicAction);
             }
-            
-            /// <param name="methodInfo">Information of current property function through reflection.</param>
-            /// <param name="inputs">Function arguments.</param>
-            /// <returns>A string as if the function is called, i.e. "MyFunctionName(MyArgType1 MyArg1, MyArgType2 MyArg2, ...)"</returns>
-            public static string PrettyPrintFunctionCall(MethodInfo methodInfo, object[] inputs)
+            else if (action == "travel")
             {
-                var sb = new StringBuilder();
-                sb.Append(methodInfo.Name);
-                sb.Append("(");
-                var parameters = methodInfo.GetParameters();
-                for (int i = 0; i < parameters.Length; i++)
-                {
-                    var paramTypeName = parameters[i].ParameterType.Name;
-                    string paramValue;
-                    if (inputs[i] == null) paramValue = "null";
-                    else
-                    {
-                        try { paramValue = JsonConvert.SerializeObject(inputs[i]); }
-                        catch { paramValue = inputs[i].ToString(); }
-                    }
-                    sb.AppendFormat("{0} {1}", paramTypeName, paramValue);
-                    if (i < parameters.Length - 1) sb.Append(", ");
-                }
-                sb.Append(")");
-                return sb.ToString();
+                m_TravelGroup.orders.Add(order);
+                m_TravelGroup.properties.Add(newAtomicAction);
+            }
+            else
+            {
+                Debug.LogWarning("action class does not exist: " + action);
             }
         }
         
         /// <summary>
-        /// Initializes all atomic property functions to OpenAI API supported format (JsonSchema).
+        /// Add new extraction examples to the system, used when user adds customized atomic actions. <br/>
         /// </summary>
-        /// <param name="myShapeControllerType">Type of user-defined ShapeController, used to check existence of atomic property functions.</param>
-        /// <param name="propertyFunctionNames">Names of property functions.</param>
-        /// <returns>A dictionary where key = functionName, value = corresponding JsonSchema of the function.</returns>
-        public Dictionary<string, Tool> InitFunctionCalls(Type myShapeControllerType, List<string> propertyFunctionNames)
+        /// <param name="action">The action that the extraction example belongs to.</param>
+        /// <param name="input">Example user instruction.</param>
+        /// <param name="output">Example desired model output.</param>
+        public void AddExtractionExamples(string action, string input, string output)
         {
-            var functionCallDict = new Dictionary<string, FunctionCallGroup>();
-            foreach (var functionCallGroup in functionCallGroups)
-            {
-                functionCallDict.Add(functionCallGroup.name, functionCallGroup);
-            }
-            var toolDict = new Dictionary<string, Tool>();
-            foreach (var functionName in propertyFunctionNames)
-            {
-                // the atomic function must exist
-                var methodInfo = myShapeControllerType.GetMethod(functionName);
-                if (methodInfo == null)
-                {
-                    Debug.LogWarning($"propertyFunction with name {functionName} does not exist, skipped");
-                    continue;
-                }
-                // parameter type can either cast or be embedding matches by specifying with PropertyMethodAttribute
-                if (methodInfo.GetCustomAttribute<ShapeController.PropertyMethodAttribute>() != null) continue;
-                var paramsObject = new JObject();
-                var canCast = true;
-                foreach (var parameterInfo in methodInfo.GetParameters())
-                {
-                    // if the parameter has PropertyParameter Attribute, skip them
-                    if (Attribute.IsDefined(parameterInfo, typeof(ShapeController.PropertyParameterAttribute))) continue;
-                    if (!FunctionParamGroup.paramTypeJsons.TryGetValue(parameterInfo.ParameterType, out var paramObject))
-                    {
-                        Debug.LogWarning($"cannot cast {parameterInfo.Name} with type {parameterInfo.ParameterType}");
-                        canCast = false;
-                        break;
-                    }
-                    // JObject paramObject =
-                    //     PropertyExecutor.FunctionParamGroup.GetParamTypeJsonObject(parameterInfo.ParameterType);
-                    // DO NOT modify the template m_ParamTypeJsons!
-                    var paramObjectCopy = (JObject) paramObject.DeepClone();
-                    paramsObject.Add(parameterInfo.Name, paramObjectCopy);
-                }
-                if (!canCast) continue;
-                // add custom parameter properties if they exist
-                var isCustomArgs = functionCallDict.TryGetValue(functionName, out var functionCallGroup);
-                if (isCustomArgs)
-                {
-                    foreach (var functionParamGroup in functionCallGroup.paramGroups)
-                    {
-                        var isInfoAdded = functionParamGroup.TryAddParamInfo(ref paramsObject);
-                        if (isInfoAdded)
-                        {
-                            Debug.Log($"custom parameter {functionParamGroup.name} info is added to function {functionCallGroup.name}");
-                        }
-                    }
-                }
-                // wrap paramsObject to OpenAI API required format
-                JObject funcObject = null;
-                if (paramsObject.Count > 0)
-                {
-                    funcObject = new JObject
-                    {
-                        ["type"] = "object",
-                        ["properties"] = paramsObject,
-                    };
-                    if (isCustomArgs) functionCallGroup.AddParamsRequirement(ref funcObject);
-                }
-                // add function description if they exist
-                string functionDescription = null;
-                if (isCustomArgs) functionDescription = functionCallGroup.description;
-                Tool tool = new Function(
-                    name: functionName,
-                    description: functionDescription,
-                    parameters: funcObject
-                );
-                toolDict.Add(functionName, tool);
-                Debug.Log($"tool {functionName} is added with parameters = {funcObject}");
-            }
-            return toolDict;
+            var examplePair = new Utils.FewShotPair(input, output);
+            if (action == "select") m_SelectionGroup.fewShotPairs.Add(examplePair);
+            else if (action == "modify") m_ModificationGroup.fewShotPairs.Add(examplePair);
+            else if (action == "travel") m_TravelGroup.fewShotPairs.Add(examplePair);
+            else Debug.LogWarning("action class does not exist: " + action);
         }
 
         /// <summary>
-        /// A group containing essential elements for one function parameter.
+        /// Extract property mappings in user instruction that corresponds to each defined atomic action class.
         /// </summary>
-        [Serializable]
-        public struct FunctionParamGroup
-        {
-            [SerializeField] private string m_Name;
-            [SerializeField] private bool m_Required;
-            [SerializeField] private string m_Description;
-            [SerializeField] private List<Utils.FewShotPair> m_Examples;
-
-            /// <value>Function parameter name.</value>
-            public string name
-            {
-                get => m_Name;
-                set => m_Name = value;
-            }
-    
-            /// <value>Whether this parameter is required, default to False.</value>
-            public bool required
-            {
-                get => m_Required;
-                set => m_Required = value;
-            }
-    
-            /// <value>Optional, function parameter description.</value>
-            public string description
-            {
-                get => m_Description;
-                set => m_Description = value;
-            }
-    
-            /// <value>Optional, list of few-shot example (input, output) pair provided to the model as illustration to the parameter is used.</value>
-            public List<Utils.FewShotPair> examples
-            {
-                get => m_Examples;
-                set => m_Examples = value;
-            }
-
-            /// <param name="paramName">Function parameter name.</param>
-            /// <param name="paramRequired">Whether this parameter is required, default to False.</param>
-            /// <param name="paramDescription">Optional, function parameter description, a summarization of its usage.</param>
-            /// <param name="paramExamples">Optional, list of few-shot example (input, output) pair provided to the model.</param>
-            public FunctionParamGroup(string paramName, bool paramRequired = false, string paramDescription = null, List<Utils.FewShotPair> paramExamples = null)
-            {
-                m_Name = paramName;
-                m_Required = paramRequired;
-                m_Description = paramDescription;
-                m_Examples = paramExamples ?? new List<Utils.FewShotPair>();
-            }
-
-            /// <summary>
-            /// Try to add current parameter information to a (possibly empty) JsonSchema.
-            /// </summary>
-            /// <param name="paramsObject">The JsonSchema of the property function that the current parameter is attached to, will be updated upon execution of this method.</param>
-            /// <returns>Whether the JsonSchema is updated successfully.</returns>
-            public bool TryAddParamInfo(ref JObject paramsObject)
-            {
-                if (!paramsObject.TryGetValue(name, out var paramToken))
-                {
-                    Debug.LogWarning($"custom parameter {name} does not exist in declared paramsObject {paramsObject}");
-                    return false;
-                }
-                var paramObject = (JObject) paramToken;
-                var fullParamDescription = "";
-                if (description != null) fullParamDescription += description;
-                if (examples != null)
-                {
-                    foreach (var example in examples)
-                    {
-                        fullParamDescription += $" {example.input} -> {example.output}.";
-                    }
-                }
-                if (fullParamDescription == "")
-                {
-                    Debug.LogWarning($"custom parameter {name} does not have information attached to it in resolved paramObject {paramObject}");
-                    return false;
-                }
-                paramObject.Add("description", fullParamDescription);
-                return true;
-            }
-            
-            // public static JObject GetParamTypeJsonObject(Type type)
-            // {
-            //     JsonSchema schema = JsonSchema.FromType(type);
-            //     string schemaJson = schema.ToJson();
-            //     return JObject.Parse(schemaJson);
-            // }
-            
-            private static Dictionary<Type, JObject> m_ParamTypeJsons = new ()
-            {
-                {typeof(int), new JObject { ["type"] = "integer" }},
-                {typeof(bool), new JObject { ["type"] = "boolean" }},
-                {typeof(float), new JObject { ["type"] = "number" }},
-                {typeof(string), new JObject { ["type"] = "string" }},
-                {typeof(List<int>), new JObject
-                {
-                    ["type"] = "array",
-                    ["items"] = new JObject
-                    {
-                        ["type"] = "integer",
-                    }
-                }},
-                {typeof(List<bool>), new JObject
-                {
-                    ["type"] = "array",
-                    ["items"] = new JObject
-                    {
-                        ["type"] = "boolean",
-                    }
-                }},
-                {typeof(List<float>), new JObject
-                {
-                    ["type"] = "array",
-                    ["items"] = new JObject
-                    {
-                        ["type"] = "number",
-                    }
-                }},
-                {typeof(List<string>), new JObject
-                {
-                    ["type"] = "array",
-                    ["items"] = new JObject
-                    {
-                        ["type"] = "string",
-                    }
-                }},
-            };
-
-            /// <value>Pre-defined (function type, JsonSchema template) mappings for OpenAI API, user can add customized mapping by updating this field.</value>
-            public static Dictionary<Type, JObject> paramTypeJsons
-            {
-                get => m_ParamTypeJsons;
-                set => m_ParamTypeJsons = value;
-            }
-        }
-
-        /// <summary>
-        /// Execute atomic property functions on given objects (controllers) and update their states (attributes).
-        /// </summary>
-        /// <param name="propertyDict">
+        /// <param name="action">The action class that the userInput belongs to.</param>
+        /// <param name="userInput">Input user instruction.</param>
+        /// <returns>
         /// Ordered dictionary of pairs (targetProperty, targetFeatures) in their execution order. <br/>
         /// {targetProperty} are like "shape", "distance", "direction", etc. <br/>
         /// {targetFeatures} are like "cube", "5 meters", "on my left", etc. <br/>
-        /// </param>
-        /// <param name="toolDict">A dictionary of function name to property function JsonSchema mappings.</param>
-        /// <param name="myShapeControllerType">Type of user-defined ShapeController, used for checking function existence.</param>
-        /// <param name="allControllers">All candidate objects that function calls can be performed on.</param>
-        /// <param name="selectedControllers">Selected object indexes that function calls are actually performed on.</param>
-        /// <param name="myEmbeddingsType">Type of user-defined Embeddings, used for checking attributes for function arguments validity.</param>
-        /// <param name="embeddings">Stores all candidate attributes for function calling.</param>
-        /// <param name="historyMessages">Visualization.</param>
-        /// <returns>Filtered object indexes that function calls are successfully executed on.</returns>
-        public async Task<bool[]> ExecuteProperty(OrderedDictionary propertyDict, Dictionary<string, Tool> toolDict, 
-            Type myShapeControllerType, ShapeController[] allControllers, bool[] selectedControllers, 
-            Type myEmbeddingsType, Embeddings embeddings, 
-            List<string> historyMessages)
+        /// </returns>
+        public async Task<OrderedDictionary> ExtractProperty(string action, string userInput)
         {
-            foreach (var propertyKey in propertyDict.Keys)
+            var extractionPrompt = GetExtractionPrompt(action, userInput);
+            Debug.Log($"{action} extractionPrompt: {extractionPrompt}");
+            var extractDict = new OrderedDictionary();
+            string extractionOutput;
+            try
             {
-                var functionName = (string) propertyKey;
-                var userInput = (string) propertyDict[functionName];
-                Debug.Log("Function name: " + functionName);
-                Debug.Log("User input: " + userInput);
-                var methodInfo = myShapeControllerType.GetMethod(functionName);
-                // If it's GetShape, override...
-                
-                // it is the user's responsibility to write the desired atomic function
-                if (methodInfo == null)
-                {
-                    Debug.LogWarning($"propertyFunction with name {functionName} does not exist, skipped");
-                    continue;
-                }
-                // method must return boolean to denote execution success
-                if (methodInfo.ReturnType != typeof(bool))
-                {
-                    Debug.LogWarning($"propertyFunction with name {functionName} does not return a boolean, skipped");
-                }
-                object[] parameters;
-                // field to optionally denote comparison based parameter position
-                var comparisonPos = -1;
-                // fetch parameters by function calling to LLMs
-                if (toolDict.TryGetValue(functionName, out Tool tool))
-                {
-                    var functionCallOutput =
-                        await VoiceIntentController.CallCompletionWithTools(userInput, new List<Tool> { tool });
-                    Debug.Log($"{functionName} functionCallOutput: {functionCallOutput}");
-                    // handle model failure in function calling
-                    if (functionCallOutput == Utils.k_FailureResponse) continue;
-                    var functionCallJObject = JsonConvert.DeserializeObject<JObject>(functionCallOutput);
-                    var parameterInfos = methodInfo.GetParameters();
-                    parameters = new object[parameterInfos.Length];
-                    var invokeState = true;
-                    for (var i = 0; i < parameterInfos.Length; i++)
-                    {
-                        var parameterName = parameterInfos[i].Name;
-                        var parameterType = parameterInfos[i].ParameterType;
-                        // assign value if it exists
-                        if (functionCallJObject.TryGetValue(parameterName, out JToken parameterJToken))
-                        {
-                            var parameterValue = JsonConvert.DeserializeObject(parameterJToken.ToString(), parameterType);
-                            if (parameterValue == null)
-                            {
-                                invokeState = false;
-                                Debug.LogWarning($"propertyFunction with name {functionName} fails to deserialize parameter value at position {i}: type {parameterType} got value {parameterJToken}");
-                                break;
-                            }
-                            parameters[i] = parameterValue;
-                        } 
-                        // assign default value otherwise
-                        else if (parameterInfos[i].HasDefaultValue)
-                        {
-                            parameters[i] = parameterInfos[i].DefaultValue;
-                        }
-                        // assign to comparison target later (i.e. shape controller) if parameter is a comparison based argument
-                        else if (parameterInfos[i].GetCustomAttribute<ShapeController.PropertyParameterAttribute>() != null)
-                        {
-                            parameters[i] = null;
-                            comparisonPos = i;
-                        }
-                        // not acceptable
-                        else
-                        {
-                            invokeState = false;
-                            Debug.LogWarning($"propertyFunction with name {functionName} fails to receive parameter value at position {i} and is not optional");
-                            break;
-                        }
-                    }
-                    if (!invokeState) continue;
-                }
-                // fetch parameters by matching embeddings (classification) from LLMs
-                else
-                {
-                    // method must have exactly 1 parameter
-                    if (methodInfo.GetParameters().Length != 1)
-                    {
-                        Debug.LogWarning($"propertyFunction with name {functionName} must have only one parameter to match embeddings");
-                        continue;
-                    }
-                    // method must have special attribute to denote "embedding match"
-                    var methodAttribute = methodInfo.GetCustomAttribute<ShapeController.PropertyMethodAttribute>();
-                    if (methodAttribute == null)
-                    {
-                        Debug.LogWarning($"propertyFunction with name {functionName} must have PropertyMethodAttribute to access embeddings");
-                        continue;
-                    }
-                    // the attribute must point to the storage field of the embedding
-                    var propertyName = methodAttribute.property;
-                    var fieldInfo = myEmbeddingsType.GetProperty(propertyName);
-                    if (fieldInfo == null)
-                    {
-                        Debug.LogWarning($"propertyFunction with name {functionName} does not have corresponding fieldInfo to access embeddings, get {propertyName}");
-                        continue;
-                    }
-                    var fieldValue = fieldInfo.GetValue(embeddings);
-                    // this should never happen because Embedding class is accessed right before this line
-                    if (fieldValue == null)
-                    {
-                        Debug.LogWarning($"fieldValue with name {propertyName} is not field member of the given embedding");
-                        continue;
-                    }
-                    // the embedding storage must be the following type for auto casting
-                    Dictionary<string, object> fieldDict = fieldValue as Dictionary<string, object>;
-                    if (fieldDict == null)
-                    {
-                        Debug.LogWarning($"fieldValue with name {fieldInfo.Name} must be of type {typeof(Dictionary<string, object>)} for dynamic casting");
-                        continue;
-                    }
-                    // pre-load and save embedding data for current propertyMap (fieldDict)
-                    bool isEmbeddingProcessed = await embeddings.ProcessEmbeddingData(fieldDict, propertyName);
-                    if (!isEmbeddingProcessed)
-                    {
-                        Debug.LogWarning($"failed to process propertyMap embedding with name {propertyName}");
-                        continue;
-                    }
-                    // var (classificationOutput, similarity) = await embeddings.GetEmbedding(userInput, propertyName);
-                    // Debug.Log($"{functionName} classificationOutput: {classificationOutput}, confidence: {similarity}");
-                    string[] output = await embeddings.GetClosestShapes(userInput);
-                    var classificationOutput = "";
-                    var similarity = 1.0;
-                    // handle model failure in classification
-                    if (classificationOutput == Utils.k_FailureResponse) continue;
-                    if (similarity < Utils.k_MinConfidenceToProceed) continue;
-                    // if (!fieldDict.TryGetValue(classificationOutput, out object propertyValue))
-                    // {
-                    //     // this should never happen now as we use embedding matches
-                    //     Debug.LogWarning($"model fails to classify {userInput} into one of {fieldDict.Keys}");
-                    //     continue;
-                    // }
-                    // parameters = new []{ propertyValue };
-                    List<string> matchedProperties = new List<string>();
-                    foreach (var item in output)
-                    {
-                        matchedProperties.Add(item);
-                    }
-                    parameters = new []{ matchedProperties.ToArray() };
-                }
-                // function calling to each controller
-                Debug.Log("Attenmpting to select...");
-                var otherControllerIdx = -1;
-                for (var i = 0; i < allControllers.Length; i++)
-                {
-                    if (!selectedControllers[i]) continue;
-                    
-                    // // Check the type of the object by checking its parent
-                    // Transform parent = allControllers[i].transform.parent;
-                    // if (parent != null)
-                    // {
-                    //     // Check for specific shape types
-                    //     if (parent.name == "Spheres")
-                    //     {
-                    //         // If it's a sphere, keep it selected
-                    //         selectedControllers[i] = true;
-                    //     }
-                    //     else if (parent.name == "Cubes")
-                    //     {
-                    //         // If it's a cube, keep it selected
-                    //         selectedControllers[i] = true;
-                    //     }
-                    //     else if (parent.name == "Buildings")
-                    //     {
-                    //         // If it's a rectangle, keep it selected
-                    //         selectedControllers[i] = true;
-                    //     }
-                    //     else
-                    //     {
-                    //         // If it's not a specific shape type, deselect it
-                    //         selectedControllers[i] = false;
-                    //     }
-                    // }
-                    
-                    if (comparisonPos != -1)
-                    {
-                        if (otherControllerIdx == -1)
-                        {
-                            otherControllerIdx = i;
-                            parameters[comparisonPos] = allControllers[otherControllerIdx];
-                            continue;
-                        }
-                        parameters[comparisonPos] = allControllers[otherControllerIdx];
-                    }
-                    var isMatched = (bool) methodInfo.Invoke(allControllers[i], parameters);
-                    if (comparisonPos != -1 && isMatched)
-                    {
-                        selectedControllers[otherControllerIdx] = false;
-                        otherControllerIdx = i;
-                    }
-                    if (!isMatched) selectedControllers[i] = false;
-                }
-                // update display
-                var displayMessage = FunctionCallGroup.PrettyPrintFunctionCall(methodInfo, parameters);
-                displayMessage = $"<color=#00bfff>{displayMessage}</color>\n";
-                Debug.Log(displayMessage);
-                historyMessages.Add(displayMessage);
+                extractionOutput = await VoiceIntentController.CallCompletion(extractionPrompt);
+                Debug.Log($"{action} extractionOutput: {extractionOutput}");
             }
-            for (var i = 0; i < selectedControllers.Length; i++)
+            catch (Exception e)
             {
-                var xrGrabInteractable = allControllers[i].grabInteractable;
-                if (xrGrabInteractable == null) continue;
-                xrGrabInteractable.enabled = selectedControllers[i];
+                Debug.Log($"{action} property extractor gets exception in OpenAICompletion:\n" + e);
+                return extractDict;
             }
-            return selectedControllers;
+            if (extractionOutput == Utils.k_FailureResponse) return extractDict;
+            Utils.FewShotGroup extractionGroup;
+            if (action == "select") extractionGroup = m_SelectionGroup;
+            else if (action == "modify") extractionGroup = m_ModificationGroup;
+            else if (action == "travel") extractionGroup = m_TravelGroup; 
+            else
+            {
+                Debug.Log($"action not found: {action}");
+                return extractDict;
+            }
+            foreach (var propertyMessage in extractionOutput.Split(", "))
+            {
+                var propertyTuple = propertyMessage.Split(": ");
+                if (propertyTuple.Length > 1)
+                {
+                    var targetProperty = propertyTuple[0];
+                    var targetFeature = propertyTuple[1];
+                    if (extractionGroup.properties.Contains(targetProperty))
+                    {
+                        Debug.Log($"<color=green>{action}: [{targetProperty}] -> [{targetFeature}]</color>\n");
+                        extractDict.Add(targetProperty, targetFeature);
+                    }
+                }
+            }
+            var orderedExtractList = new List<(int, string)>();
+            for (var i = 0; i < extractionGroup.properties.Count; i++)
+            {
+                if (extractDict.Contains(extractionGroup.properties[i]))
+                {
+                    orderedExtractList.Add((extractionGroup.orders[i], extractionGroup.properties[i]));
+                }
+            }
+            orderedExtractList.Sort();
+            var orderedExtractDict = new OrderedDictionary();
+            foreach (var (_, targetProperty) in orderedExtractList)
+            {
+                orderedExtractDict.Add(targetProperty, extractDict[targetProperty]);
+            }
+            return orderedExtractDict;
         }
     }
 }
