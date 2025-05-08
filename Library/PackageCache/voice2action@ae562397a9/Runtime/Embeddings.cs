@@ -113,7 +113,7 @@ namespace Voice2Action
         {
             if (m_EmbeddingMap.ContainsKey(propertyMapName)) return true;
             // create embedding dir path if it does not exist
-            DirectoryInfo gameRootDir = Directory.GetParent(Application.dataPath);
+            DirectoryInfo gameRootDir = Directory.GetParent(Application.persistentDataPath);
             if (gameRootDir == null)
             {
                 Debug.LogWarning($"gameRootDir does not exist given Assets folder is {Application.dataPath}, exiting");
@@ -275,7 +275,7 @@ namespace Voice2Action
 
         public async Task<string[]> GetClosestShapes(string userInput)
         {
-            string filePath = Path.Combine(Application.dataPath, "objectsSeen.json");
+            string filePath = Path.Combine(Application.persistentDataPath, "objectsSeen.json");
             if (!File.Exists(filePath))
             {
                 Debug.LogWarning($"JSON file at {filePath} does not exist");
@@ -295,7 +295,7 @@ namespace Voice2Action
 
             var requestData = new
             {
-                model = "gpt-4.1",
+                model = "gpt-4.1-mini",
                 messages = new[]
                 {
                     new

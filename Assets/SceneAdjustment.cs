@@ -86,7 +86,7 @@ public class SceneAdjustment : MonoBehaviour
     {
         string m_EmbeddingDataDir = "";
         string propertyMapName = "shapeMap";
-        DirectoryInfo gameRootDir = Directory.GetParent(Application.dataPath);
+        DirectoryInfo gameRootDir = Directory.GetParent(Application.persistentDataPath);
         string fileDir = Path.Combine(gameRootDir.FullName, "Embeddings", m_EmbeddingDataDir);
         if (!Directory.Exists(fileDir))
         {
@@ -179,30 +179,48 @@ public class SceneAdjustment : MonoBehaviour
 
     private async Task<object> TakeScreenShotsOfAllInteractableObjects()
     {
+        if (GameCamera == null)
+        {
+            Debug.LogError("GameCamera is not assigned.");
+            return null;
+        }
+
         Vector3 cameraPosition = GameCamera.transform.position;
         var parentObjects = GameObject.FindGameObjectsWithTag(PARENT_OBJECT_TAG);
+
+        if (parentObjects == null || parentObjects.Length == 0)
+        {
+            Debug.LogError($"No objects found with tag: {PARENT_OBJECT_TAG}");
+            return null;
+        }
+
         Debug.Log("Number of parent objects: " + parentObjects.Length);
 
-        // List to hold all tasks
         List<Task> completionTasks = new List<Task>();
+        int batchSize = 5;
+        int counter = 0;
 
         foreach (var parentObject in parentObjects)
         {
-            foreach (var o in parentObjects) o.SetActive(false);
+            if (parentObject == null)
+            {
+                Debug.LogWarning("Encountered a null parent object. Skipping...");
+                continue;
+            }
+
+            foreach (var o in parentObjects) o?.SetActive(false);
             parentObject.SetActive(true);
 
-            // Set the camera to look at the object
             GameCamera.transform.position = parentObject.transform.position + new Vector3(1, 1, 0);
             GameCamera.transform.LookAt(parentObject.transform.position);
 
-            // Move the camera back incrementally until the object is fully visible
             while (!IsObjectFullyVisible(GameCamera, parentObject))
             {
                 GameCamera.transform.position -= GameCamera.transform.forward * 0.5f;
             }
 
             List<string> photos = new List<string>();
-            string base64Image = CaptureScreenshot(GameCamera, "photo1"  + parentObject.name); 
+            string base64Image = CaptureScreenshot(GameCamera, "photo1" + parentObject.name);
             photos.Add(base64Image);
 
             GameCamera.transform.position = parentObject.transform.position + new Vector3(1, 1, 1);
@@ -213,7 +231,7 @@ public class SceneAdjustment : MonoBehaviour
                 GameCamera.transform.position -= GameCamera.transform.forward * 0.5f;
             }
 
-            string base64ImageTwo = CaptureScreenshot(GameCamera, "photo2" + parentObject.name); 
+            string base64ImageTwo = CaptureScreenshot(GameCamera, "photo2" + parentObject.name);
             photos.Add(base64ImageTwo);
 
             List<string> prefabRoots = new List<string>();
@@ -236,18 +254,28 @@ public class SceneAdjustment : MonoBehaviour
                 }
             }));
 
-            // Start the task but do not await it yet
             var task = CallCompletionImage(photos, JsonConvert.SerializeObject(prefabRoots), parentObject);
             completionTasks.Add(task);
+            counter++;
+            
+            // Process the batch when the counter reaches the batch size
+            if (counter >= batchSize)
+            {
+                await Task.WhenAll(completionTasks);
+                completionTasks.Clear();
+                counter = 0;
+            }
         }
 
-        // Restore camera position
-        GameCamera.transform.position = cameraPosition;
-        foreach (var o in parentObjects) o.SetActive(true);
+        // Process any remaining tasks in the final batch
+        if (completionTasks.Count > 0)
+        {
+            await Task.WhenAll(completionTasks);
+        }
 
-        // Await all tasks to complete
-        await Task.WhenAll(completionTasks);
-        
+        GameCamera.transform.position = cameraPosition;
+        foreach (var o in parentObjects) o?.SetActive(true);
+
         return "";
     }
 
@@ -296,8 +324,8 @@ public class SceneAdjustment : MonoBehaviour
         RenderTexture.active = null;
         Destroy(rt);
         byte[] bytes = screenShot.EncodeToJPG();
-        string filePath = "/Users/vinayakkannan/Desktop/" + path + "Screenshot.jpg";
-        System.IO.File.WriteAllBytes(filePath, bytes);
+        // string filePath = "/Users/vinayakkannan/Desktop/" + path + "Screenshot.jpg";
+        // System.IO.File.WriteAllBytes(filePath, bytes);
         string base64Image = Convert.ToBase64String(bytes);
         return base64Image;
     }
@@ -328,10 +356,11 @@ public class SceneAdjustment : MonoBehaviour
         while (!Utils.EnsureOpenAIClient())
         {
             Debug.Log("⏳ Waiting for OpenAIConfiguration to load...");
-            yield return new WaitForSeconds(0.5f);
+            yield return new WaitForSeconds(1f);
         }
 
         Debug.Log("🚀 OpenAIClient is ready — running scene setup.");
+        yield return new WaitForSeconds(3f);
         RunAfterOpenAIReady();
     }
 
@@ -353,7 +382,7 @@ public class SceneAdjustment : MonoBehaviour
         }
         // Save objectsSeen as a JSON file
         string jsonOutput = JsonConvert.SerializeObject(objectsSeen, Formatting.Indented);
-        string outputPath = Path.Combine(Application.dataPath, "objectsSeen.json");
+        string outputPath = Path.Combine(Application.persistentDataPath, "objectsSeen.json");
         File.WriteAllText(outputPath, jsonOutput);
         Debug.Log($"Saved objectsSeen to: {outputPath}");
         try
