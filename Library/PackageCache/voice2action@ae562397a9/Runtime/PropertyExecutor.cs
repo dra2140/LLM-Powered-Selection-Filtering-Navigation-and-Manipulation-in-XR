@@ -496,7 +496,7 @@ namespace Voice2Action
                 if (toolDict.TryGetValue(functionName, out Tool tool))
                 {
                     var functionCallOutput =
-                        await VoiceIntentController.CallCompletionWithTools(userInput, new List<Tool> { tool });
+                        await VoiceIntentController.CallCompletionWithTools(userInput, new List<Tool> { tool }, historyMessages);
                     Debug.Log($"{functionName} functionCallOutput: {functionCallOutput}");
                     // handle model failure in function calling
                     if (functionCallOutput == Utils.k_FailureResponse) continue;
@@ -588,7 +588,7 @@ namespace Voice2Action
                     }
                     // var (classificationOutput, similarity) = await embeddings.GetEmbedding(userInput, propertyName);
                     // Debug.Log($"{functionName} classificationOutput: {classificationOutput}, confidence: {similarity}");
-                    string[] output = await embeddings.GetClosestShapes(userInput);
+                    string[] output = await embeddings.GetClosestShapes(userInput, historyMessages);
                     var classificationOutput = "";
                     var similarity = 1.0;
                     // handle model failure in classification
@@ -675,4 +675,4 @@ namespace Voice2Action
             return selectedControllers;
         }
     }
-} 
+}

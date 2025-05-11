@@ -218,10 +218,11 @@ namespace Voice2Action
         {
             public int GameObjectID { get; set; }
             public string Name { get; set; }
+            public Vector3 Scale { get; set; }
             public Vector3 RelativePosition { get; set; }
             public Quaternion RelativeRotation { get; set; }        }
         
-        private void UpdateGetShapeObjectsTransforms(GetShapeObjects targetObjects)
+        public static void UpdateGetShapeObjectsTransforms(GetShapeObjects targetObjects)
         {
             var xrOrigin = FindObjectOfType<XROrigin>();
             if (xrOrigin == null)
@@ -237,6 +238,7 @@ namespace Voice2Action
                 {
                     obj.RelativePosition = xrOrigin.transform.InverseTransformPoint(targetObject.transform.position);
                     obj.RelativeRotation = Quaternion.Inverse(xrOrigin.transform.rotation) * targetObject.transform.rotation;
+                    obj.Scale = targetObject.transform.localScale;
                 }
                 else
                 {
@@ -273,7 +275,27 @@ namespace Voice2Action
             public List<LabeledObject> root { get; set; }
         }
 
-        public async Task<string[]> GetClosestShapes(string userInput)
+        public static string GetObjectsStringFromJSON()
+        {
+            string filePath = Path.Combine(Application.persistentDataPath, "objectsSeen.json");
+            if (!File.Exists(filePath))
+            {
+                Debug.LogWarning($"JSON file at {filePath} does not exist");
+                return "";
+            }
+
+            string jsonContent = File.ReadAllText(filePath);
+            GetShapeObjects targetObjects = JsonConvert.DeserializeObject<GetShapeObjects>(jsonContent);
+            UpdateGetShapeObjectsTransforms(targetObjects);
+            // Convert the objects to a string format
+            string[] gameObjectsText = targetObjects.objects.Select(obj =>
+                $"{{ \"GameObjectID\": {obj.GameObjectID}, \"Name\": \"{obj.Name}\", \"RelativePosition to user\": [{obj.RelativePosition.x}, {obj.RelativePosition.y}, {obj.RelativePosition.z}], \"RelativeRotation to user\": [{obj.RelativeRotation.x}, {obj.RelativeRotation.y}, {obj.RelativeRotation.z}, {obj.RelativeRotation.w}] }}").ToArray();
+            string gameObjectsTextString = string.Join(", ", gameObjectsText);
+            return gameObjectsTextString;
+        }
+
+
+        public async Task<string[]> GetClosestShapes(string userInput, List<string> historyMessages)
         {
             string filePath = Path.Combine(Application.persistentDataPath, "objectsSeen.json");
             if (!File.Exists(filePath))
@@ -306,7 +328,7 @@ namespace Voice2Action
                             new
                             {
                                 type = "text",
-                                text = $"You are analyzing a userInput describing what they want to do in a Unity game world, along with a list of objects in a 3D scene and their 3D transforms. Your task is to review the userInput and determine the GameObjectIDs that are most closely related to what the user wants to do. For example, if the userInput is about selecting all buses that are nearby, return the GameObjectIDs of objects that are relatively close to the user and have names indicating they are buses, based on their relative positions and transforms. \n\nThe userInput is: {userInput}. Here are the objects in the game world: {gameObjectsTextString}"
+                                text = $"You are analyzing a userInput describing what they want to do in a Unity game world, along with a list of objects in a 3D scene and their 3D transforms. Your task is to review the userInput and determine the GameObjectIDs that are most closely related to what the user wants to do. For example, if the userInput is about selecting all buses that are nearby, return the GameObjectIDs of objects that are relatively close to the user and have names indicating they are buses, based on their relative positions and transforms. \n\nThe userInput is: {userInput}. \n\nFor context, here are the previous messages between the user and the agent: {historyMessages}.\n\n Here are the objects in the game world: {gameObjectsTextString}"
                             }
                         }
                     }

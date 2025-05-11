@@ -73,7 +73,7 @@ namespace Voice2Action
             instruction: "Extract actions {} from the input, separate by comma.",
             indicators: new List<string>
             {
-                "If some actions do not exist, do not print anything."
+                "If some actions do not exist, try to choose the action that best matches the possible options."
             },
             orderedProperties: new List<(int, string)>
             {
@@ -100,8 +100,8 @@ namespace Voice2Action
                     "ModifyScale: a bit taller, ModifyPositionX: left"
                 ),
                 new (
-                    "make them shorter and move them up",
-                    "ModifyScale: shorter, ModifyPositionY: up"
+                    "make them shorter by 1 and move them up",
+                    "ModifyScale: -1, ModifyPositionY: up"
                 ),
                 new (
                     "move it to the left",
@@ -314,15 +314,20 @@ namespace Voice2Action
         /// {targetProperty} are like "shape", "distance", "direction", etc. <br/>
         /// {targetFeatures} are like "cube", "5 meters", "on my left", etc. <br/>
         /// </returns>
-        public async Task<OrderedDictionary> ExtractProperty(string action, string userInput)
+        public async Task<OrderedDictionary> ExtractProperty(string action, string userInput, List<string> messageHistory)
         {
-            var extractionPrompt = GetExtractionPrompt(action, userInput);
+            var extractionPrompt = GetExtractionPrompt(action, userInput).Replace(
+                "If some actions do not exist, do not print", 
+                "If some actions do not exist, try to refer to the message history or take your best guess as to which actions make sense"
+            );
             Debug.Log($"{action} extractionPrompt: {extractionPrompt}");
             var extractDict = new OrderedDictionary();
             string extractionOutput;
+            string systemCall =
+                $"You are reviewing a userInput describing what they want to do in a Unity game world. You are analyzing pairs of input / output pairs. Examples on how to provide the output are provided before the last input / output pair. Provide the relevant output result based on the input provided last, seperated by commas. The messages earlier in the chat history between you and the user are provided; use them to infer what action the user wants to take, if it's not clear based on the provided input. See the chat history: {string.Join(", ", messageHistory)}\n";
             try
             {
-                extractionOutput = await VoiceIntentController.CallCompletion(extractionPrompt);
+                extractionOutput = await VoiceIntentController.CallCompletion(extractionPrompt, systemCall);
                 Debug.Log($"{action} extractionOutput: {extractionOutput}");
             }
             catch (Exception e)

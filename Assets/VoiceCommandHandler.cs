@@ -62,7 +62,7 @@ public class VoiceCommandHandler : MonoBehaviour
             string actionPhrase = action.Value;
 
             // Extract properties for this action
-            var extractedProperties = await propertyExtractor.ExtractProperty(actionType, actionPhrase);
+            var extractedProperties = await propertyExtractor.ExtractProperty(actionType, actionPhrase, historyMessages);
             
             // Create array of selected controllers (all true for now)
             bool[] selectedControllers = new bool[shapeControllers.Length];

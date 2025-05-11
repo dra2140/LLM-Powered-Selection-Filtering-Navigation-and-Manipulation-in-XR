@@ -1,4 +1,4 @@
-using System;
+    using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -284,18 +284,11 @@ namespace Voice2Action
         /// <returns>Denote modification success.</returns>
         public bool ModifyScale(float value)
         {
-            var currentScale = transform.localScale;
-            var newScale = currentScale * (1 + Mathf.Abs(value));
-
-            // If value is negative, we're scaling down
-            if (value < 0)
-            {
-                newScale = currentScale / (1 + Mathf.Abs(value));
-            }
-
-            transform.localScale = newScale;
-            return true;
+var currentScale = transform.localScale;
+    transform.localScale = currentScale * value;
+        return true;
         }
+        
 
         /// <summary>
         /// Modify the position of current object along the X axis.
@@ -304,15 +297,18 @@ namespace Voice2Action
         /// <returns>Denote modification success.</returns>
         public bool ModifyPositionX(float value)
         {
+            var playerPosition = player.transform.position;
             var controllerPosition = transform.position;
-            float moveAmount = Mathf.Abs(value); // Use the actual magnitude from the command
+            float moveAmount = 0.5f; // Base movement amount
 
             if (value < 0)
             {
+                // Move left (negative X)
                 controllerPosition.x -= moveAmount;
             }
             else
             {
+                // Move right (positive X)
                 controllerPosition.x += moveAmount;
             }
 
@@ -327,15 +323,18 @@ namespace Voice2Action
         /// <returns>Denote modification success.</returns>
         public bool ModifyPositionY(float value)
         {
+            var playerPosition = player.transform.position;
             var controllerPosition = transform.position;
-            float moveAmount = Mathf.Abs(value); // Use the actual magnitude from the command
+            float moveAmount = 0.5f; // Base movement amount
 
             if (value < 0)
             {
+                // Move down (negative Y)
                 controllerPosition.y -= moveAmount;
             }
             else
             {
+                // Move up (positive Y)
                 controllerPosition.y += moveAmount;
             }
 
@@ -350,45 +349,34 @@ namespace Voice2Action
         /// <returns>Denote modification success.</returns>
         public bool ModifyPositionZ(float value)
         {
+            var playerPosition = player.transform.position;
             var controllerPosition = transform.position;
-            float moveAmount = Mathf.Abs(value); // Use the actual magnitude from the command
 
             if (value < 0)
             {
-                controllerPosition.z -= moveAmount;
+                // Move backward (away from player)
+                controllerPosition.z += -value / (1 - value) * (controllerPosition.z - playerPosition.z);
             }
             else
             {
-                controllerPosition.z += moveAmount;
+                // Move forward (toward player)
+                controllerPosition.z -= value / (1 + value) * (controllerPosition.z - playerPosition.z);
             }
 
             transform.position = controllerPosition;
             return true;
         }
         
-        public bool ModifyRotationX(float value)
-        {
-            var currentRotation = transform.eulerAngles;
-            currentRotation.x += value;
-            transform.eulerAngles = currentRotation;
-            return true;
-        }
-
-        public bool ModifyRotationY(float value)
-        {
-            var currentRotation = transform.eulerAngles;
-            currentRotation.y += value;
-            transform.eulerAngles = currentRotation;
-            return true;
-        }
-
-        public bool ModifyRotationZ(float value)
-        {
-            var currentRotation = transform.eulerAngles;
-            currentRotation.z += value;
-            transform.eulerAngles = currentRotation;
-            return true;
-        }
+        /// <summary>
+        /// Modify the position of current object.
+        /// </summary>
+        /// <param name="value">1-DOF magnitude of modification wrt. to the user.</param>
+        /// <returns>Denote modification success.</returns>
+        // public bool ModifyPosition(float value)
+        // {
+        //     // For backward compatibility, default to Y-axis movement
+        //     return ModifyPositionY(value);
+        // }
 
         #endregion
     }

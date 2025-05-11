@@ -166,13 +166,18 @@ namespace Voice2Action
         /// </returns>
         public async Task<Dictionary<string, string>> ClassifyProperty(string userInput)
         {
-            var classificationPrompt = classificationGroup.GetPrompt(userInput);
+            
+            string systemPrompt = "You are analyzing pairs of input / output pairs. Examples on how to provide the output are provided before the last input / output pair. Provide the relevant output result based on the input provided last, seperated by commas.";
+            var classificationPrompt = classificationGroup.GetPrompt(userInput).Replace(
+                "If some actions do not exist, do not print", 
+                "If some actions do not exist, try to refer to the message history or take your best guess as to which actions make sense"
+            );
             Debug.Log("classificationPrompt: " + classificationPrompt);
             var classifyDict = new Dictionary<string, string>();
             string classificationOutput;
             try
             {
-                classificationOutput = await VoiceIntentController.CallCompletion(classificationPrompt);
+                classificationOutput = await VoiceIntentController.CallCompletion(classificationPrompt, systemPrompt);
                 Debug.Log("classificationOutput: " + classificationOutput);
             } 
             catch (Exception e)

@@ -1,13 +1,20 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.IO;
+using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
+using NUnit.Framework.Constraints;
 using OpenAI;
 using OpenAI.Audio;
 using OpenAI.Chat;
 using TMPro;
+using Unity.XR.CoreUtils;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Networking;
 
 namespace Voice2Action
 {
@@ -300,6 +307,125 @@ namespace Voice2Action
                 return Utils.k_FailureResponse;
             }
         }
+        
+        private bool askedQuestionLastTurn = false;
+        
+        public class DetermineIfNeedsToAskQuestionResponse
+        {
+            public bool NeedQuestion { get; set; }
+            public string QuestionToAskUser { get; set; }
+        }
+        
+        private async Task<bool> DetermineIfNeedsToAskQuestion(string userInput)
+        {
+            if (askedQuestionLastTurn) return false;
+            
+            string filePath = Path.Combine(Application.persistentDataPath, "objectsSeen.json");
+                if (!File.Exists(filePath))
+                {
+                    Debug.LogWarning($"JSON file at {filePath} does not exist");
+                    return false;
+                }
+
+                string jsonContent = File.ReadAllText(filePath);
+                Embeddings.GetShapeObjects targetObjects = JsonConvert.DeserializeObject<Embeddings.GetShapeObjects>(jsonContent);
+                Embeddings.UpdateGetShapeObjectsTransforms(targetObjects);
+                // Convert the objects to a string format
+                string[] gameObjectsText = targetObjects.objects.Select(obj =>
+                    $"{{ \"GameObjectID\": {obj.GameObjectID}, \"Name\": \"{obj.Name}\", \"RelativePosition to user\": [{obj.RelativePosition.x}, {obj.RelativePosition.y}, {obj.RelativePosition.z}], \"RelativeRotation to user\": [{obj.RelativeRotation.x}, {obj.RelativeRotation.y}, {obj.RelativeRotation.z}, {obj.RelativeRotation.w}] }}").ToArray();
+                string gameObjectsTextString = string.Join(", ", gameObjectsText);
+                
+                string url = "https://api.openai.com/v1/chat/completions";
+
+                var requestData = new
+                {
+                    model = "gpt-4.1-mini",
+                    messages = new[]
+                    {
+                        new
+                        {
+                            role = "user",
+                            content = new object[]
+                            {
+                                new
+                                {
+                                    type = "text",
+                                    text = $"You are analyzing a userInput describing what they want to do in a Unity game world, along with a list of objects in a 3D scene and their 3D transforms, and the previous chat history. Your task is to review the userInput and determine if you, the agent, needs to ask a follow up question to their userInput to understand how they want to interact with the world. For example, if they ask you a question, set NeedQuestion to True and then describe your response and then ask them a question back in QuestionToAskUser. You should also ask questions if they ask to do something ambiguous, like select a tree house when no tree houses are amongst the game objects. Otherwise, set NeedQuestion to False if the userInput is clear. Try to not ask questions, unless needed. \n\nThe userInput is: {userInput}. \n\n Here is the user's previous chat history: {string.Join(" ", m_HistoryMessages)}. \n\nHere are the objects in the game world: {gameObjectsTextString}"
+                                }
+                            }
+                        }
+                    },
+                    response_format = new
+                    {
+                        type = "json_schema",
+                        json_schema = new
+                        {
+                            name = "DetermineIfNeedsToAskQuestionResponse",
+                            schema = new
+                            {
+                                type = "object",
+                                properties = new
+                                {
+                                    NeedQuestion = new { type = "boolean", description = "Whether the agent needs to ask a follow-up question." },
+                                    QuestionToAskUser = new
+                                    {
+                                        type = "string",
+                                        description = "The question to ask the user if needed."
+                                    }
+                                },
+                                required = new[] { "NeedQuestion", "QuestionToAskUser" },
+                                additionalProperties = false
+                            },
+                            strict = true
+                        }
+                    }
+                };
+
+                string jsonData = JsonConvert.SerializeObject(requestData); //gets rid of the 400 ba request errors
+                Debug.Log("Request JSON: " + jsonData);
+
+                byte[] bodyRaw = Encoding.UTF8.GetBytes(jsonData);
+                UnityWebRequest request = new UnityWebRequest(url, "POST");
+                request.uploadHandler = new UploadHandlerRaw(bodyRaw);
+                request.downloadHandler = new DownloadHandlerBuffer();
+                request.SetRequestHeader("Content-Type", "application/json");
+                request.SetRequestHeader("Authorization", "Bearer " + Resources.Load<OpenAIConfiguration>("OpenAIConfiguration").ApiKey);
+
+
+                var operation = request.SendWebRequest();
+                while (!operation.isDone)
+                {
+                    await Task.Yield();
+                }
+
+                if (request.result == UnityWebRequest.Result.Success)
+                {
+                    Debug.Log("Response: " + request.downloadHandler.text);
+                    Embeddings.ChatResponse jsonResponse = JsonConvert.DeserializeObject<Embeddings.ChatResponse>(request.downloadHandler.text);
+                    if (jsonResponse != null && jsonResponse.Choices != null && jsonResponse.Choices.Count > 0)
+                    {
+                        string response = jsonResponse.Choices[0].Message.Content;
+
+                        DetermineIfNeedsToAskQuestionResponse parsed = JsonConvert.DeserializeObject<DetermineIfNeedsToAskQuestionResponse>(response);
+                        if (parsed != null && parsed.NeedQuestion)
+                        {
+                            // askedQuestionLastTurn = true;
+                            m_HistoryMessages.Add("<color=white>Assistant: </color><color=green>" + parsed.QuestionToAskUser + "</color>\n");
+                            UpdateMessageDisplay("<color=white>Assistant: </color><color=green>" + parsed.QuestionToAskUser + "</color>", m_Voice2ActionGUIScrollText);
+                            return true;
+                        }
+                        if (parsed != null && parsed.NeedQuestion == false)
+                        {
+                            askedQuestionLastTurn = false;
+                            return false;
+                        }
+                    }
+                }
+                Debug.LogError("Error: " + request.error);
+                askedQuestionLastTurn = false;
+                return false;
+        }
+        
 
         /// <summary>
         /// Entry point for calling the full pipeline of Voice2Action.
@@ -310,6 +436,13 @@ namespace Voice2Action
         {
             m_HistoryMessages.Add("<color=white>User:</color> <color=green>" + prompt + "</color>\n");
             UpdateMessageDisplay("<color=white>User:</color> <color=green>" + prompt + "</color>", m_Voice2ActionGUIScrollText);
+            
+            bool response = await DetermineIfNeedsToAskQuestion(prompt);
+            if (response)
+            {
+                m_FormattedMessage = PrintHistory(m_HistoryMessages);
+                return;
+            }
 
             // First classify the property
             Dictionary<string, string> classifyDict = await m_PropertyClassifier.ClassifyProperty(prompt);
@@ -317,7 +450,7 @@ namespace Voice2Action
             // Handle selection
             if (classifyDict.TryGetValue("select", out string selectionInput))
             {
-                OrderedDictionary selectDict = await m_PropertyExtractor.ExtractProperty("select", selectionInput);
+                OrderedDictionary selectDict = await m_PropertyExtractor.ExtractProperty("select", selectionInput, m_HistoryMessages);
                 if (selectDict.Count == 0)
                 {
                     m_OpenAIStatus = false;
@@ -355,7 +488,7 @@ namespace Voice2Action
             // Handle modification
             if (classifyDict.TryGetValue("modify", out string modificationInput))
             {
-                OrderedDictionary modifyDict = await m_PropertyExtractor.ExtractProperty("modify", modificationInput);
+                OrderedDictionary modifyDict = await m_PropertyExtractor.ExtractProperty("modify", modificationInput, m_HistoryMessages);
                 m_SelectedControllers = await m_PropertyExecutor.ExecuteProperty(modifyDict, m_ToolDict,
                     m_MyShapeControllerType, m_AllControllers, m_SelectedControllers,
                     m_MyEmbeddingsType, myEmbeddings,
@@ -379,7 +512,7 @@ namespace Voice2Action
             // Add the new travel handling here
             if (classifyDict.TryGetValue("travel", out string travelInput))
             {
-                OrderedDictionary travelDict = await m_PropertyExtractor.ExtractProperty("travel", travelInput);
+                OrderedDictionary travelDict = await m_PropertyExtractor.ExtractProperty("travel", travelInput, m_HistoryMessages);
                 if (travelDict.Count > 0)  // Check if we successfully extracted travel properties
                 {
                     if (CanQuickTravel())
@@ -458,7 +591,7 @@ namespace Voice2Action
         /// <param name="userInput">Input user message</param>
         /// <param name="tools">Json-formatted function declarations</param>
         /// <returns>Json-formatted function call arguments.</returns>
-        public static async Task<string> CallCompletionWithTools(string userInput, List<Tool> availableTools)
+        public static async Task<string> CallCompletionWithTools(string userInput, List<Tool> availableTools, List<string> messageHistory)
         {
             var toolDefinitions = new List<object>
             {
@@ -519,7 +652,7 @@ namespace Voice2Action
                 new
                 {
                     name = "ModifyScale",
-                    description = "Change the size of the selected object. Convert all numeric words to numbers (e.g. 'five times' → 5). Use negative values to shrink, positive to grow.",
+                    description = "Change the size of the selected object, in relative terms. Convert all numeric words to numbers (e.g. 'five' → 5). Use negative values to shrink, positive to grow.",
                     parameters = new
                     {
                         type = "object",
@@ -533,13 +666,19 @@ namespace Voice2Action
                         },
                         required = new[] { "value" }
                     }
-                }
+                },
+                
+
             };
+
+            string userPrompt =
+                $"See the user's prompt here: {userInput}. Here were their previous messages with you, the assistant: {string.Join(" ", messageHistory)}. " +
+                $"Here are the objects in the game world: {Embeddings.GetObjectsStringFromJSON()}. ";
 
             var messages = new List<Message>
             {
                 new Message(Role.System, 
-                    "You are a precise command interpreter that converts natural language into exact numerical values and actions. " +
+                    "You are a precise command interpreter that converts natural language into exact numerical values and actions, in the context of parsing a users desired spoken action in a Unity VR scene into actions. " +
                     "Your primary task is to extract numbers and actions from user commands.\n\n" +
                     "Number Conversion Rules:\n" +
                     "1. ALWAYS convert word numbers to digits:\n" +
@@ -557,10 +696,10 @@ namespace Voice2Action
                     "   - right/up/forward → positive\n\n" +
                     "Examples:\n" +
                     "- 'move left by five' → ModifyPositionX with value=-5\n" +
-                    "- 'scale up three times' → ModifyScale with value=3\n" +
+                    "- 'scale up by 3' → ModifyScale with value=3\n" +
                     "- 'move slightly to the right' → ModifyPositionX with value=1\n" +
                     "- 'make it twice as big' → ModifyScale with value=2"),
-                new Message(Role.User, userInput)
+                new Message(Role.User, userPrompt)
             };
 
             var chatRequest = new ChatRequest(messages, tools: availableTools, model: Utils.k_ChatModel, temperature: Utils.k_CompletionTemperature);
