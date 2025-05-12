@@ -98,9 +98,32 @@ namespace Voice2Action
             if (m_ExpandPanel.activeSelf)
             {
                 var cameraPosition = xrOriginCamera.transform.position;
-                var desiredPosition = new Vector3(cameraPosition.x, cameraPosition.y, cameraPosition.z + 0.5f);
+                var cameraForward = xrOriginCamera.transform.forward;
+                var cameraRight = xrOriginCamera.transform.right;
+                var cameraUp = xrOriginCamera.transform.up;
+                
+                // Calculate position based on camera's position and forward direction
+                // Add offsets: 0.2f up and -0.2f to the left (negative right direction)
+                var desiredPosition = cameraPosition + 
+                                     (cameraForward * 1f) + 
+                                     (cameraUp * 0.2f) + 
+                                     (cameraRight * -0.2f);
+                                     
                 var smoothedPosition = Vector3.Lerp(m_ExpandPanel.transform.position, desiredPosition, 0.005f);
                 m_ExpandPanel.transform.position = smoothedPosition;
+                
+                // Add rotation handling with X rotation clamped to -90
+                var directionToCamera = (cameraPosition - m_ExpandPanel.transform.position).normalized;
+                var targetRotation = Quaternion.LookRotation(-directionToCamera);
+                
+                // Extract the Euler angles
+                var eulerAngles = targetRotation.eulerAngles;
+                // Clamp X rotation to -90 degrees
+                eulerAngles.x = -90f;
+                // Convert back to Quaternion
+                targetRotation = Quaternion.Euler(eulerAngles);
+                
+                m_ExpandPanel.transform.rotation = Quaternion.Slerp(m_ExpandPanel.transform.rotation, targetRotation, 0.005f);
             }
         }
 
@@ -111,15 +134,21 @@ namespace Voice2Action
         {
             m_ExpandPanel.SetActive(true);
             var originalPosition = xrOriginCamera.transform.position;
-            m_ExpandPanel.transform.position = new Vector3(originalPosition.x , originalPosition.y, originalPosition.z + 0.5f);
-            m_ExpandPanel.transform.up = (originalPosition - m_ExpandPanel.transform.position).normalized;
+            var cameraForward = xrOriginCamera.transform.forward;
+            var cameraRight = xrOriginCamera.transform.right;
+            var cameraUp = xrOriginCamera.transform.up;
+            
+            // Update panel position with the same offset we use in Update()
+            m_ExpandPanel.transform.position = originalPosition + 
+                                     (cameraForward * 0.9f) + 
+                                     (cameraUp * 0.2f) + 
+                                     (cameraRight * -0.2f);
 
             for (var i = 0; i < Mathf.Min(m_ListExpandObject.Count, k_MaxExpandNum); i++)
             {
                 var (original, proxy) = m_ListExpandObject[i];
                 proxy.transform.parent = m_ParentExpandedObjects.transform;
                 
-                // change size of the object so that it fits within the canvas
                 try
                 {
                     var bounds = original.shapeCollider.bounds;
@@ -127,15 +156,19 @@ namespace Voice2Action
                     var expandHeightRatio = bounds.size.y / m_PanelHeight;
                     var expandLengthRatio = bounds.size.z / Mathf.Min(m_PanelWidth, m_PanelHeight);
                     proxy.transform.localScale /= Mathf.Max(expandHeightRatio, expandWidthRatio, expandLengthRatio);
+                    proxy.transform.localScale *= 1.1f; // Make proxy 10% larger
 
-                    // change position of proxy object
-                    var panelTransform = m_ExpandPanel.transform;
-                    // - 4 * panelTransform.right - 6 * panelTransform.forward
+                    // Calculate position using panel's right and up vectors
                     var xIndex = i % 4;
                     var yIndex = i / 4;
-                    var targetPosition = panelTransform.position + new Vector3 ((-3 + 2 * xIndex) * m_PanelWidth, (2 * yIndex - 1) * m_PanelHeight, -0.05f);
+                    var targetPosition = m_ExpandPanel.transform.position +
+                                       m_ExpandPanel.transform.right * ((-3 + 2 * xIndex) * m_PanelWidth) +
+                                       m_ExpandPanel.transform.up * ((2 * yIndex - 1) * m_PanelHeight);
+                    
                     // lerp proxy to expand panel
                     proxy.interactableTarget.SetVariablesForLerp(targetPosition);
+                    proxy.transform.rotation = m_ExpandPanel.transform.rotation;
+                    proxy.transform.Rotate(Vector3.right, 90f, Space.Self); 
                 }
                 catch (Exception e)
                 {
@@ -309,4 +342,3 @@ namespace Voice2Action
         }
     }
 }
-
